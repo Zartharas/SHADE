@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+venv/
+.venv/
+*.egg-info/
+
+# OS cruft
+.DS_Store
+
+# Generated pipeline artifacts (regenerate with: python3 run_pipeline.py --n 2000)
+output/
+
+# Paper drafts and OCJ submission files (identity-bearing; kept local-only
+# during double-anonymous review; see .identity_backup/NOTES.md)
+paper/
+
+# Clean copy of final submission files for academic documentation/sharing
+# (identity-bearing; same reasoning as paper/ above)
+academic_documentation/
+
+# Local identity backup, never pushed
+.identity_backup/
+
+# Regenerable eval harness output (see experiments/dlp_benchmark_config.json)
+experiments/output/

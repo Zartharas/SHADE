@@ -1,0 +1,29 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying paper and/or this repository."
+title: "Project SHADE: A Zero-Budget Prototype for Shadow AI Discovery, Classification, and Governance"
+type: software
+authors:
+  - family-names: "Anonymous"
+    given-names: "For double-anonymous review"
+license: MIT
+repository-code: "https://github.com/Zartharas/SHADE"
+keywords:
+  - shadow ai
+  - knowledge governance
+  - data loss prevention
+  - ai risk classification
+  - cybersecurity
+preferred-citation:
+  type: article
+  title: "Governing Unseen Knowledge: A Practical Framework for Discovering, Classifying, and Managing Shadow AI as an Organizational Knowledge Risk"
+  authors:
+    - family-names: "Anonymous"
+      given-names: "For double-anonymous review"
+  journal: "Organizational Cybersecurity Journal: Practice, Process & People"
+  year: 2026
+  status: "submitted"
+
+# NOTE: Author identity redacted for the duration of double-anonymous peer
+# review. Full attribution (name, ORCID) is preserved locally in
+# .identity_backup/ (gitignored, not pushed) and will be restored here once
+# a review decision is issued.

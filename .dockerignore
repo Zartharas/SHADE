@@ -1,0 +1,10 @@
+.git
+__pycache__/
+*.pyc
+venv/
+.venv/
+output/
+.identity_backup/
+paper/
+academic_documentation/
+experiments/output/

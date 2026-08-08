@@ -1,0 +1,8 @@
+{
+  "_comment": "Config for eval_harness.py's DLP benchmark. experiments/output/ holds generated reports (gitignored, regenerate with the command below).",
+  "n_samples": 300,
+  "seed": 42,
+  "command": "python3 eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json",
+  "f1_threshold_micro": 0.95,
+  "f1_threshold_per_pattern": 0.90
+}

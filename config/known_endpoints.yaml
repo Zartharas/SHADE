@@ -1,0 +1,36 @@
+# known_endpoints.yaml
+#
+# Reference registry mapping AI tool identifiers to governance metadata.
+# This is a SMALL, ILLUSTRATIVE registry for the prototype only.
+# In production, this registry should be generated/maintained from
+# real discovery telemetry (Section 3 of the chapter): Zeek/Suricata
+# SNI logs, AIOStack eBPF traces, agent-discover-scanner inventories,
+# and cloud control-plane logs -- not hand-maintained.
+
+sanctioned:
+  - name: "Internal-Assistant-Enterprise"
+    tool_risk: "low"
+    notes: "Org-licensed, contractually reviewed, no training on inputs."
+  - name: "ApprovedCode-Copilot-Enterprise"
+    tool_risk: "medium"
+    notes: "Org-licensed code assistant, DPA executed, subprocessors disclosed."
+
+unsanctioned:
+  - name: "ConsumerChat-Public"
+    tool_risk: "medium"
+    notes: "Free-tier consumer chat assistant, personal-account access pattern."
+  - name: "ConsumerChat-Public-Plus"
+    tool_risk: "medium"
+    notes: "Paid consumer tier, still personal-account, no enterprise DPA."
+  - name: "OpenCodeGen-Community"
+    tool_risk: "high"
+    notes: "Community code-completion tool, undisclosed subprocessors, no opt-out confirmed."
+  - name: "LocalAgentRuntime-MCP"
+    tool_risk: "high"
+    notes: "Locally-run agent framework / MCP server with filesystem+API access."
+  - name: "QuickSummarize-Free"
+    tool_risk: "low"
+    notes: "Free summarization tool, generally used on public content."
+  - name: "RivalLLM-Chat"
+    tool_risk: "high"
+    notes: "Foreign-hosted consumer LLM, no verifiable data-handling disclosure."

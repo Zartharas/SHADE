@@ -1,0 +1,36 @@
+name: SHADE self-check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (pinned)
+        run: pip install -r requirements.txt
+      - name: Run formal verification + evaluation harness (decision matrix, DLP benchmark, explainability)
+        run: python3 test_pipeline.py
+      - name: Run DLP evaluation harness standalone and upload report
+        run: python3 eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json
+      - name: Upload DLP benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dlp-benchmark-report
+          path: experiments/output/dlp_benchmark_report.json
+      - name: Run full pipeline end-to-end
+        run: python3 run_pipeline.py --n 500
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Docker image
+        run: docker build -t shade .
+      - name: Run self-check inside container
+        run: docker run --rm shade python3 test_pipeline.py
