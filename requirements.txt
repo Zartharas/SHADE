@@ -1,10 +1,10 @@
-# Pinned to exact versions, verified installing and running the full
-# pipeline + test suite together in this session (Python 3.10.12 sandbox).
-# The Dockerfile below targets python:3.11-slim per the README's stated
-# minimum; these same pins should resolve there too since all five packages
-# publish 3.11-compatible wheels for these versions, but that combination
-# was not separately verified in this session -- verify via `docker build`
-# (see Dockerfile) before treating it as confirmed.
+# Pinned to exact versions. Verified twice: installing and running the
+# full pipeline + test suite directly in a Python 3.10.12 sandbox, and
+# again via `docker build` on python:3.11-slim (see Dockerfile) -- both
+# environments pass all 6 checks in test_pipeline.py and run_pipeline.py
+# end to end.
+# Previously left as >=; README flagged unpinned deps as an open
+# reproducibility limitation.
 # Previously left as >=; README flagged unpinned deps as an open
 # reproducibility limitation.
 faker==40.36.0
