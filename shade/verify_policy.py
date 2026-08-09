@@ -193,8 +193,9 @@ def run_all_checks(verbose=False):
 # extensions/_verification_core.py (see
 # docs/adr/0002-integrating-llm-policy-proposer.md) so shade/policy_proposer.py
 # doesn't have to import from extensions/ -- a core module depending on
-# optional-extension code would be backwards. extensions/mcp_tool_call_monitor.py
-# (still a standalone extension) also imports this rather than duplicating it.
+# optional-extension code would be backwards. shade/mcp_tool_call_monitor.py
+# (graduated into shade/ per docs/adr/0003-integrating-mcp-tool-call-monitor.md)
+# also imports this rather than duplicating it.
 #
 # Same method as the rest of this module: exhaustive enumeration over a
 # finite domain. Still the right tool as long as the domain stays a flat

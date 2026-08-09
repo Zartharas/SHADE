@@ -10,6 +10,7 @@ Usage:
     python tests/test_pipeline.py       # from repo root
     python -m tests.test_pipeline       # equivalent, module form
 """
+import json
 import os
 import sys
 
@@ -19,6 +20,7 @@ from shade.dlp_redact import redact_text
 import shade.verify_policy as verify_policy
 import shade.eval_harness as eval_harness
 import shade.policy_proposer as policy_proposer
+import shade.mcp_tool_call_monitor as mcp_monitor
 
 
 def test_decision_matrix_covers_every_cell():
@@ -138,6 +140,60 @@ def test_policy_proposer_never_mutates_decision_matrix():
     policy_proposer.propose_and_verify("mutation check: normal", out_path=None)
     test_policy_proposer_rejects_a_broken_backend()
     assert DECISION_MATRIX == before, "DECISION_MATRIX was mutated by a proposal -- this must never happen"
+
+
+def test_mcp_decision_matrix_formally_verified():
+    # shade/mcp_tool_call_monitor.py's MCP_DECISION_MATRIX is a second,
+    # independently-authored (method_risk_class x data_sensitivity)
+    # governance table -- see docs/adr/0003-integrating-mcp-tool-call-monitor.md.
+    # Confirms the generalized verifier from ADR 0002 correctly accepts
+    # this hand-authored-but-well-formed table, not just the original one.
+    violations = verify_policy.verify_arbitrary_matrix(
+        mcp_monitor.MCP_DECISION_MATRIX,
+        mcp_monitor.METHOD_RISK_CLASSES,
+        mcp_monitor.DATA_SENSITIVITY_LEVELS,
+        mcp_monitor.KNOWN_ACTIONS,
+    )
+    assert violations == [], f"MCP_DECISION_MATRIX failed formal verification: {violations}"
+
+
+def test_mcp_verifier_rejects_a_broken_matrix():
+    # Mirrors test_policy_proposer_rejects_a_broken_backend's load-bearing
+    # claim, applied to the second governance table: an incomplete matrix
+    # using an invalid action label must be flagged, not silently accepted.
+    broken = dict(mcp_monitor.MCP_DECISION_MATRIX)
+    broken.pop(("read", "public"), None)  # incompleteness
+    broken[("execute", "critical")] = "MAYBE_BLOCK_IDK"  # invalid action
+    violations = verify_policy.verify_arbitrary_matrix(
+        broken,
+        mcp_monitor.METHOD_RISK_CLASSES,
+        mcp_monitor.DATA_SENSITIVITY_LEVELS,
+        mcp_monitor.KNOWN_ACTIONS,
+    )
+    assert len(violations) == 2, f"expected 2 violations (1 missing cell, 1 invalid action), got: {violations}"
+
+
+def test_mcp_synthetic_tool_calls_are_well_formed():
+    # Generator smoke test: fixed seed for reproducibility, every row has
+    # the documented fields, every governance_action was actually produced
+    # by decide_tool_call() (not some other value), and dlp_hits is valid
+    # JSON (redact_text's contract, reused from shade/dlp_redact.py).
+    rows = mcp_monitor.generate_synthetic_tool_calls(50, seed=42)
+    assert len(rows) == 50
+    expected_fields = {
+        "call_id", "timestamp", "mcp_server", "method", "method_risk_class",
+        "data_sensitivity", "args_summary_redacted", "dlp_hits", "governance_action",
+    }
+    for row in rows:
+        assert set(row.keys()) == expected_fields
+        assert row["governance_action"] == mcp_monitor.decide_tool_call(
+            row["method_risk_class"], row["data_sensitivity"]
+        )
+        json.loads(row["dlp_hits"])  # must be valid JSON, raises if not
+
+    report = mcp_monitor.summarize(rows)
+    assert report["total_calls"] == 50
+    assert sum(report["by_governance_action"].values()) == 50
 
 
 def test_dlp_leaves_clean_text_untouched():

@@ -76,7 +76,7 @@ If you touch one:
 - Keep it standalone. Don't add imports from `extensions/` into
   `shade/run_pipeline.py`, `tests/test_pipeline.py`, or any core-pipeline module --
   that would silently change what the documented, tested pipeline does.
-- Reuse core logic where it genuinely fits (as the existing three do:
+- Reuse core logic where it genuinely fits (as the graduated modules do:
   `shade/dlp_redact.py`'s patterns, the exhaustive-enumeration verification
   method from ADR 0001, `shade/generate_synthetic_data.py`'s generator) instead
   of reimplementing it.
@@ -92,7 +92,11 @@ If you touch one:
 
 Extensions move from `extensions/` into `shade/` one at a time, each with
 its own ADR (see `docs/adr/0002-integrating-llm-policy-proposer.md` for the
-first one and the template it sets). A graduation ADR should cover: what
+first one and the template it sets, and
+`docs/adr/0003-integrating-mcp-tool-call-monitor.md` for a case where the
+integration shape had to differ -- a parallel pipeline phase instead of a
+chained one -- because the module's data had no real relationship to
+existing pipeline output). A graduation ADR should cover: what
 moves and why, what safety property must be preserved (e.g. "never
 auto-applies to DECISION_MATRIX" for the policy proposer), whether it
 becomes a default-on or opt-in pipeline stage (opt-in unless there's a

@@ -7,21 +7,27 @@ overridden by request; all three were implemented as solo-researcher-
 scoped prototypes, not as finished, defensible research contributions in
 their own right.
 
-**Update:** the LLM policy proposer has since graduated out of this
-document -- it's now `shade/policy_proposer.py`, tested by
-`tests/test_pipeline.py`, and wired into `shade/run_pipeline.py` as an
-opt-in stage. See `docs/adr/0002-integrating-llm-policy-proposer.md` for
-that integration decision. The other two remain standalone extensions,
-described below, and this document is still the honest accounting of what
-each does and doesn't demonstrate. Per the maintainer's stated plan
-(integrate one at a time, test, then move to the next), MCP monitoring and
-DP reporting are candidates for the same treatment later, each getting its
-own ADR when/if that happens.
+**Update:** the LLM policy proposer and the MCP tool-call monitor have
+since graduated out of this document. The proposer is now
+`shade/policy_proposer.py` (see
+`docs/adr/0002-integrating-llm-policy-proposer.md`); the MCP monitor is
+now `shade/mcp_tool_call_monitor.py` (see
+`docs/adr/0003-integrating-mcp-tool-call-monitor.md`). Both are tested by
+`tests/test_pipeline.py` and wired into `shade/run_pipeline.py` as
+opt-in stages -- the proposer chains downstream of a run's own governance
+results, while the MCP monitor runs as an independent parallel phase,
+since its synthetic tool-call stream has no real relationship to the core
+pipeline's chat-tool events (see ADR 0003 for why). DP aggregate reporting
+remains a standalone extension, described below, and this document is
+still the honest accounting of what it does and doesn't demonstrate. Per
+the maintainer's stated plan (integrate one at a time, test, then move to
+the next), DP reporting is the last of the three and is a candidate for
+the same treatment later, with its own ADR (0004) when/if that happens.
 
-The remaining two live in `extensions/`, are standalone (importable and
-runnable independently), and are **not wired into `shade/run_pipeline.py`
-or `tests/test_pipeline.py`** -- they don't change the core pipeline's
-documented behavior, and none of their claims should be read as claims
+The remaining one lives in `extensions/`, is standalone (importable and
+runnable independently), and is **not wired into `shade/run_pipeline.py`
+or `tests/test_pipeline.py`** -- it doesn't change the core pipeline's
+documented behavior, and none of its claims should be read as claims
 about the core SHADE pipeline itself.
 
 ```mermaid
@@ -30,10 +36,10 @@ flowchart TB
         GS[shade/governance_score.py<br/>DECISION_MATRIX] --> VP[shade/verify_policy.py<br/>exhaustive verification + verify_arbitrary_matrix]
         DR[shade/dlp_redact.py<br/>PATTERNS]
         GEN[shade/generate_synthetic_data.py]
-        PP[shade/policy_proposer.py<br/>propose -> verify -> human review<br/>opt-in pipeline stage]
+        PP[shade/policy_proposer.py<br/>propose -> verify -> human review<br/>opt-in pipeline stage, chained]
+        MCP[shade/mcp_tool_call_monitor.py<br/>agent tool-call telemetry<br/>opt-in pipeline stage, parallel]
     end
     subgraph ext["extensions/ (standalone, CI-smoke-tested only)"]
-        MCP[mcp_tool_call_monitor.py<br/>agent tool-call telemetry]
         DP[dp_aggregate_reporting.py<br/>Laplace mechanism on aggregates]
     end
     PP --> VP
@@ -72,7 +78,7 @@ requiring a real API call and its own evaluation, still explicitly future
 work -- integration changed where the module lives and how tested it is,
 not what backend it uses.
 
-## 1. Agentic-AI-governance / MCP tool-call monitoring (`extensions/mcp_tool_call_monitor.py`)
+## Graduated: agentic-AI-governance / MCP tool-call monitoring (now `shade/mcp_tool_call_monitor.py`)
 
 Extends SHADE's monitoring concept from chat-tool prompt text to agent
 tool-calls (the MCP telemetry shape: server + method + arguments), with
@@ -85,13 +91,28 @@ a new, separately verified decision matrix
 demonstrating the verification approach generalizes to a second
 governance table.
 
-**What this does NOT demonstrate:** session-level or multi-step agent plan
-reasoning (an agent chaining several individually-innocuous calls to
-achieve a risky effect no single call would trigger) -- a real and harder
-problem, explicitly out of scope here. All events are synthetic; no real
-MCP server is ever contacted.
+**What integration added:** an opt-in `--include_mcp_monitoring` flag on
+`shade/run_pipeline.py` that runs the synthetic tool-call generator as an
+INDEPENDENT parallel phase (reusing `--n` for scale, but not chained to
+this run's chat-tool events or governance results -- see
+`docs/adr/0003-integrating-mcp-tool-call-monitor.md` for why that
+structural choice differs from the policy proposer's chained integration),
+off by default so the documented default output contract is unchanged.
+Three tests in `tests/test_pipeline.py`: the shipped decision matrix
+passes formal verification, a deliberately broken matrix is correctly
+rejected, and the generator's output rows are confirmed well-formed and
+internally consistent with `decide_tool_call()`.
 
-## 2. Privacy-preserving detection prototype (`extensions/dp_aggregate_reporting.py`)
+**What this still does NOT demonstrate, even integrated:** session-level
+or multi-step agent plan reasoning (an agent chaining several
+individually-innocuous calls to achieve a risky effect no single call
+would trigger) -- a real and harder problem, explicitly out of scope
+here. All events are synthetic; no real MCP server is ever contacted.
+Integration changed where the module lives, how tested it is, and whether
+the pipeline can invoke it -- it does not change any of these scope
+limits.
+
+## 1. Privacy-preserving detection prototype (`extensions/dp_aggregate_reporting.py`)
 
 Applies the Laplace mechanism (epsilon-differential privacy for count
 queries) to SHADE's **aggregate reporting** outputs (governance action

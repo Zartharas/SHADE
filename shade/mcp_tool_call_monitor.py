@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-extensions/mcp_tool_call_monitor.py
+shade/mcp_tool_call_monitor.py
 
 Scoped prototype: extends SHADE's monitoring concept from chat-tool prompt
 text (what the core pipeline handles) to AGENT TOOL-CALLS -- the shape of
@@ -34,13 +34,21 @@ SCOPE, DELIBERATELY LIMITED:
   no single call would trigger on its own (a real and harder problem,
   explicitly out of scope here).
 - Governance decisions reuse the SAME formal-verification approach as the
-  core matrix (shade/verify_policy.py, same method as ADR 0001; see also ADR 0002)
+  core matrix (shade/verify_policy.py, same method as ADR 0001; see also ADR 0002 and
+  ADR 0003, which graduated this module into shade/)
   over a new (method_risk_class x data_sensitivity) domain -- demonstrating
   that the verification approach generalizes to a second, differently-
   shaped governance table, not just the original one.
 
 Usage:
-    python extensions/mcp_tool_call_monitor.py --n 500
+    python shade/mcp_tool_call_monitor.py --n 500
+
+Graduated into shade/ per docs/adr/0003-integrating-mcp-tool-call-monitor.md.
+See that ADR for how shade/run_pipeline.py's opt-in
+--include_mcp_monitoring flag invokes this module's functions directly
+(as an independent parallel phase, not chained to core pipeline data) and
+why the default output path convention changed from experiments/output/
+to output/ upon graduation.
 """
 import argparse
 import json
@@ -158,8 +166,8 @@ def main():
     ap = argparse.ArgumentParser(description="Synthetic MCP/agent tool-call monitoring scaffold.")
     ap.add_argument("--n", type=int, default=500)
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", type=str, default="experiments/output/mcp_tool_calls.csv")
-    ap.add_argument("--summary_out", type=str, default="experiments/output/mcp_tool_calls_summary.json")
+    ap.add_argument("--out", type=str, default="output/mcp_tool_calls.csv")
+    ap.add_argument("--summary_out", type=str, default="output/mcp_tool_calls_summary.json")
     args = ap.parse_args()
 
     # Formally verify the new decision table before using it -- same

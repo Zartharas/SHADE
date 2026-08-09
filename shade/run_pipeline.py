@@ -26,6 +26,7 @@ import shade.dlp_redact as dlp
 import shade.governance_score as gov
 import shade.build_dashboard as dash
 import shade.policy_proposer as policy_proposer
+import shade.mcp_tool_call_monitor as mcp_monitor
 
 
 def write_csv(rows, path):
@@ -46,6 +47,17 @@ def main():
                           "docs/adr/0002-integrating-llm-policy-proposer.md. Does not "
                           "change any other output file when omitted (default pipeline "
                           "behavior is unchanged).")
+    ap.add_argument("--include_mcp_monitoring", action="store_true", default=False,
+                     help="Opt-in (default off): run shade/mcp_tool_call_monitor.py's "
+                          "synthetic agent tool-call generator as an INDEPENDENT parallel "
+                          "phase (reuses --n for scale, but draws no data from this run's "
+                          "chat-tool events or governance results -- see "
+                          "docs/adr/0003-integrating-mcp-tool-call-monitor.md for why this "
+                          "differs structurally from --propose_policy_review), and write "
+                          "output/mcp_tool_calls.csv and "
+                          "output/mcp_tool_calls_summary.json. Does not change any other "
+                          "output file when omitted (default pipeline behavior is "
+                          "unchanged).")
     args = ap.parse_args()
 
     # Repo root, not this file's own directory (shade/) -- this script now
@@ -95,6 +107,22 @@ def main():
         )
         proposal = policy_proposer.propose_and_verify(review_context, out_path="output/policy_proposal.json")
         print(f"[optional] Policy review proposal: {proposal['status']} -> output/policy_proposal.json")
+
+    # Optional stage (opt-in only, see --include_mcp_monitoring above): an
+    # INDEPENDENT parallel phase, not chained to the core phases above --
+    # see docs/adr/0003-integrating-mcp-tool-call-monitor.md for why this
+    # module's synthetic agent tool-call stream is deliberately not derived
+    # from this run's chat-tool events or governance results.
+    if args.include_mcp_monitoring:
+        mcp_rows = mcp_monitor.generate_synthetic_tool_calls(args.n)
+        mcp_report = mcp_monitor.summarize(mcp_rows)
+        with open("output/mcp_tool_calls.csv", "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=list(mcp_rows[0].keys()))
+            writer.writeheader()
+            writer.writerows(mcp_rows)
+        with open("output/mcp_tool_calls_summary.json", "w") as f:
+            json.dump(mcp_report, f, indent=2)
+        print(f"[optional] MCP tool-call monitoring: {mcp_report['total_calls']} synthetic calls -> output/mcp_tool_calls.csv")
 
     # Phase 6: internal-checks report (filename retained as VALIDATION_REPORT.md
     # for output-contract stability; title/body describe internal checks and
