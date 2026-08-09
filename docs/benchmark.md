@@ -90,6 +90,80 @@ python3 tests/test_pipeline.py   # runs both as part of CI-equivalent checks, wi
 F1 thresholds) used in CI so a future contributor can see at a glance what
 "passing" means without reading the harness source.
 
+## Scale check (2026-08-09)
+
+The n=300 benchmark above is what CI runs on every push (fast, cheap).
+As a separate, one-off check (not part of CI, since it's slower and adds
+nothing CI's smaller run doesn't already establish about *correctness* --
+only about *scale*), the same benchmark was re-run at higher volumes:
+
+| n | seed | precision | recall | f1 | fp | fn |
+|---|---|---|---|---|---|---|
+| 300 (CI default) | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
+| 2,000 | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
+| 10,000 | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
+
+The multi-seed check was also extended to two more seeds (2026, 555) at
+n=1,000 each, beyond the five seeds already documented above at n=300:
+
+| seed | n | precision | recall | f1 |
+|---|---|---|---|---|
+| 1 | 1,000 | 1.0 | 1.0 | 1.0 |
+| 7 | 1,000 | 1.0 | 1.0 | 1.0 |
+| 99 | 1,000 | 1.0 | 1.0 | 1.0 |
+| 12345 | 1,000 | 1.0 | 1.0 | 1.0 |
+| 2026 | 1,000 | 1.0 | 1.0 | 1.0 |
+| 555 | 1,000 | 1.0 | 1.0 | 1.0 |
+
+Same conclusion as before, now at higher volume and across more seeds:
+this rules out both "seed=42 was lucky" and "300 samples was too small to
+surface a gap" as explanations for the perfect score. It does not narrow
+the scope limitation already stated above -- the benchmark still only
+covers clean structural variation, not OCR noise, homoglyphs,
+international formats, or adversarial obfuscation. More samples of the
+same kind of input will keep scoring 1.0; that was never in question.
+
+**The three opt-in pipeline extensions were also stress-tested at scale**
+(n=5,000, well above the n=100-200 used during their original integration
+verification in ADRs 0002-0004):
+
+- `--propose_policy_review`: completes in ~2.8s, still returns
+  `CANDIDATE_PENDING_HUMAN_REVIEW` with zero formal-verification
+  violations.
+- `--include_mcp_monitoring`: completes in ~4.2s, generates 5,000
+  synthetic tool-call rows with a governance-action distribution
+  consistent with `MCP_DECISION_MATRIX` (e.g. no `execute`+`critical`
+  calls slip through as anything but `BLOCK`).
+- `--privatize_governance_report`: completes in ~2.4s. One finding worth
+  noting explicitly: **absolute MAE does not shrink with n, but relative
+  error does.** At epsilon=1.0, seed=42, the action-distribution MAE was
+  1.2 at both n=500 and n=5,000 -- identical, because the Laplace
+  mechanism's noise scale (`sensitivity/epsilon`) depends only on
+  epsilon, not on how large the counts being noised are. But relative to
+  the true counts, that same fixed absolute error is far less
+  significant at scale: MAE/mean-count was 0.012 (1.2%) at n=500 versus
+  0.0012 (0.12%) at n=5,000 -- a 10x improvement in relative utility for
+  a 10x increase in dataset size, exactly as differential privacy theory
+  predicts (fixed absolute noise, shrinking relative impact as the
+  signal being protected grows). This is a real, measured property of
+  the implementation, not an assumption -- see
+  `docs/adr/0004-integrating-dp-aggregate-reporting.md` for the
+  integration this measures.
+- All three flags run together (n=5,000) completed in ~4.1s with no
+  errors, produced all 12 expected output files, and the full
+  `tests/test_pipeline.py` suite (16 checks) still passed afterward.
+
+Reproduce with:
+
+```bash
+python3 shade/eval_harness.py --n 2000 --seed 42
+python3 shade/eval_harness.py --n 10000 --seed 42
+for s in 1 7 99 12345 2026 555; do python3 shade/eval_harness.py --n 1000 --seed $s; done
+python3 shade/run_pipeline.py --n 5000 --propose_policy_review --include_mcp_monitoring --privatize_governance_report
+python3 shade/dp_aggregate_reporting.py --n 500 --epsilons 1.0
+python3 shade/dp_aggregate_reporting.py --n 5000 --epsilons 1.0
+```
+
 ## Future work (not implemented here)
 
 - Harder benchmark tiers: OCR noise, Unicode homoglyphs, international PII
