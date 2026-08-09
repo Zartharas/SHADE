@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-build_dashboard.py
+shade/build_dashboard.py
 Phase 5 of Project SHADE, see paper Section 8.5 / 6.
 
 Lightweight, local, matplotlib-based stand-in for the production ELK/
@@ -11,7 +11,7 @@ governance_score.py and renders summary visualizations to a single PNG.
 by run_pipeline.py, not by this script.)
 
 Usage:
-    python build_dashboard.py --discovery output/discovery_report.json \
+    python3 shade/build_dashboard.py --discovery output/discovery_report.json \
         --dlp output/redaction_report.json --governance output/governance_report.json \
         --out output/dashboard.png
 """

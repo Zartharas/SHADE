@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-run_pipeline.py
+shade/run_pipeline.py
 Orchestrator for Project SHADE (paper Section 8, Phases 1-6). Runs
 generation -> discovery -> DLP -> governance decisioning -> dashboard ->
 internal-checks report, entirely locally, using only synthetic data.
@@ -11,7 +11,7 @@ orchestrator just reuses the same functions rather than re-invoking them
 as separate processes.
 
 Usage:
-    python run_pipeline.py --n 2000
+    python3 shade/run_pipeline.py --n 2000
 """
 import argparse
 import csv

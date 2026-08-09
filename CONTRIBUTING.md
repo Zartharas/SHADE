@@ -88,9 +88,11 @@ here in the future. If you add one:
   changed -- the point of that document is to prevent a scaffold from
   silently implying more than it's actually been shown to do.
 - Run it standalone (`python3 extensions/<file>.py`) before committing;
-  see "Working in extensions/" note in `.github/workflows/test.yml` for
-  what CI checks (a smoke test that it runs without error, not a
-  correctness assertion -- these are prototypes, not production code).
+  see the "Smoke-test experiments/ scaffolding" step in
+  `.github/workflows/test.yml` for the pattern CI uses to check a
+  standalone script (that it runs without error, not a correctness
+  assertion -- these are prototypes, not production code) and add an
+  equivalent step for your new addition.
 
 ## Graduating an extension into shade/
 

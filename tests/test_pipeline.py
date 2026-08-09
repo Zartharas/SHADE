@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
 """
 tests/test_pipeline.py
-Three focused internal checks for the two places in Project SHADE with
-actual branching/security-relevant logic: the governance decision matrix
-(paper Section 4.4) and the DLP redaction patterns (Section 5.2).
-Not a full test suite -- just enough to fail loudly if either breaks.
+
+Internal self-check suite for Project SHADE (16 checks as of ADR 0004).
+Started as three focused checks for the two places in the original
+pipeline with actual branching/security-relevant logic -- the governance
+decision matrix (paper Section 4.4) and the DLP redaction patterns
+(Section 5.2) -- and grew a regression-test block for each opt-in
+extension as it graduated into shade/ (the policy proposer's
+verify/guardrail behavior per ADR 0002, the MCP monitor's second
+governance table per ADR 0003, and the DP reporter's Laplace mechanism
+per ADR 0004). Still not a full test suite in the general sense -- it's
+scoped to the places a silent regression would matter, not to exhaustive
+coverage of every function -- but "two places" no longer describes what's
+actually checked here; see docs/benchmark.md and the ADRs above for what
+each block of tests actually verifies.
 
 Usage:
-    python tests/test_pipeline.py       # from repo root
-    python -m tests.test_pipeline       # equivalent, module form
+    python3 tests/test_pipeline.py      # from repo root
+    python3 -m tests.test_pipeline      # equivalent, module form
 """
 import json
 import os

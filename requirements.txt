@@ -1,8 +1,12 @@
-# Pinned to exact versions. Verified twice: installing and running the
-# full pipeline + test suite directly in a Python 3.10.12 sandbox, and
-# again via `docker build` on python:3.11-slim (see Dockerfile) -- both
-# environments pass all 6 checks in test_pipeline.py and run_pipeline.py
-# end to end.
+# Pinned to exact versions. Verified installing and running the full
+# pipeline + test suite in both a native Python sandbox and via
+# `docker build` on python:3.11-slim (see Dockerfile) -- both environments
+# pass tests/test_pipeline.py's full self-check suite and run
+# shade/run_pipeline.py end to end. (Verified again after each of the
+# three ADR 0002-0004 extension integrations grew the suite from 6 to 16
+# checks -- see docs/adr/ for that history; this comment intentionally
+# doesn't hardcode the current count so it can't go stale again the same
+# way.)
 # Previously left as >=; README flagged unpinned deps as an open
 # reproducibility limitation.
 faker==40.36.0

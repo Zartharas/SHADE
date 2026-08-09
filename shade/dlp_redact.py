@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-dlp_redact.py
+shade/dlp_redact.py
 Phase 3 of Project SHADE, see paper Section 8.3 / 5.2.
 
 Lightweight, dependency-free re-implementation of the DLP redaction pattern
@@ -20,7 +20,7 @@ separately against representative, independently annotated data -- it
 should not be assumed. See paper Section 5.2.
 
 Usage:
-    python dlp_redact.py --in output/synthetic_usage.csv --out output/redacted_events.csv --report output/redaction_report.json
+    python3 shade/dlp_redact.py --in output/synthetic_usage.csv --out output/redacted_events.csv --report output/redaction_report.json
 """
 import argparse
 import csv

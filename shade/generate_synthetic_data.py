@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-generate_synthetic_data.py
+shade/generate_synthetic_data.py
 Phase 1 of Project SHADE (Scan, Hunt, Assess, Decide, Enforce), see paper Section 8.1.
 
 Generates a fully SYNTHETIC dataset of employee AI-tool-usage events using
@@ -20,7 +20,7 @@ Each record simulates:
   - a timestamp
 
 Usage:
-    python generate_synthetic_data.py --n 2000 --out output/synthetic_usage.csv
+    python3 shade/generate_synthetic_data.py --n 2000 --out output/synthetic_usage.csv
 """
 import argparse
 import os

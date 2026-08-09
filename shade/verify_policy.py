@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-verify_policy.py
+shade/verify_policy.py
 Formal verification of the governance decision matrix (paper Section 4.4),
 see docs/adr/0001-formal-verification-of-governance-matrix.md for the
 rationale behind the method chosen here.
@@ -21,7 +21,7 @@ Two properties are checked:
      fixed, known action vocabulary.
 
 Usage:
-    python verify_policy.py
+    python3 shade/verify_policy.py
 Exits 0 and prints a report on success; raises AssertionError (nonzero
 exit) with a specific violation on failure.
 """

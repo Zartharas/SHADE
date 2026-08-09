@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-governance_score.py
+shade/governance_score.py
 Phase 4 of Project SHADE, see paper Section 8.4 / 4.4.
 
 Implements the classification taxonomy's decision matrix (paper Section 4.4)
@@ -18,7 +18,7 @@ verify_policy.py (see docs/adr/0001-formal-verification-of-governance-matrix.md
 for the method and why it is sufficient for a 3x3 table).
 
 Usage:
-    python governance_score.py --in output/synthetic_usage.csv --out output/governance_report.json
+    python3 shade/governance_score.py --in output/synthetic_usage.csv --out output/governance_report.json
 """
 import argparse
 import csv

@@ -8,7 +8,7 @@ venv/
 # OS cruft
 .DS_Store
 
-# Generated pipeline artifacts (regenerate with: python3 run_pipeline.py --n 2000)
+# Generated pipeline artifacts (regenerate with: python3 shade/run_pipeline.py --n 2000)
 output/
 
 # Paper drafts and OCJ submission files (identity-bearing; kept local-only

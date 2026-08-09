@@ -20,6 +20,20 @@ It runs entirely on synthetic data generated with [Faker](https://github.com/jok
 and makes no network calls, no cloud dependencies, and uses no real
 organizational, employee, or customer data at any stage.
 
+**At a glance:** 100% synthetic (Faker-generated) data &nbsp;·&nbsp; zero
+network calls &nbsp;·&nbsp; governance decision matrix formally verified
+by exhaustive enumeration ([ADR 0001](docs/adr/0001-formal-verification-of-governance-matrix.md))
+&nbsp;·&nbsp; three optional extensions, each opt-in and off by default
+([ADR 0002](docs/adr/0002-integrating-llm-policy-proposer.md)-[0004](docs/adr/0004-integrating-dp-aggregate-reporting.md))
+&nbsp;·&nbsp; MIT licensed
+
+**Contents:** [What this is, and isn't](#what-this-is-and-isnt) ·
+[Layout](#layout) · [Quick start](#quick-start) ·
+[Reproducing at scale](#reproducing-at-scale) ·
+[Production tooling](#production-tooling-real-deployments) ·
+[Legal and ethical notes](#legal-and-ethical-notes) ·
+[License](#license) · [Citing this work](#citing-this-work)
+
 <p align="center">
   <img src="docs/pipeline_animation.svg" alt="Animated diagram of the SHADE pipeline: Generate, Discover, Classify, Govern, Validate, each stage highlighting in sequence as a run passes through it" width="820">
 </p>
@@ -97,9 +111,10 @@ standalone by design, not part of the `shade` package).
 - `docs/benchmark.md` states exactly what the evaluation harness measures
   and what it doesn't (internal consistency against synthetic ground
   truth, not real-world accuracy).
-- `docs/extensions.md` scopes the three optional prototypes in
-  `extensions/`: what each demonstrates and, as importantly, what it
-  doesn't.
+- `docs/extensions.md` records the history of the three prototypes that
+  started in `extensions/` and later graduated into `shade/` (ADR
+  0002-0004): what each demonstrated standalone and, as importantly,
+  what integration did and didn't change about those claims.
 - `docs/shadow-ai-vs-shadow-it.md` is a short comparative note grounded in
   DART and Silic et al. (2025), distinguishing Shadow AI from the older
   Shadow IT category this project's discovery/inventory approach descends
@@ -193,19 +208,13 @@ produced and why this check is kept separate from the fast, always-on
 For an actual organizational rollout, replace each SHADE module with the
 verified open-source tools cited in the paper:
 
-- **Discovery:** [AIOStack](https://github.com/aurva-io/AIOstack) (Kubernetes/eBPF),
-  [agent-discover-scanner](https://github.com/Defend-AI-Tech-Inc/agent-discover-scanner),
-  [AI-Detector](https://github.com/shamo0/AI-Detector) (MDM/endpoint),
-  [Zeek](https://zeek.org) / [Suricata](https://suricata.io) (network SNI/JA3)
-- **DLP:** [aidlp](https://github.com/fabriziosalmi/aidlp),
-  [llmproxy](https://github.com/fabriziosalmi/llmproxy),
-  [Microsoft Presidio](https://github.com/microsoft/presidio),
-  [OpenDLP](https://github.com/ezarko/opendlp), [MyDLP](https://github.com/mydlp/mydlp)
-- **Secrets hygiene:** [trufflehog](https://github.com/trufflesecurity/trufflehog),
-  [gitleaks](https://github.com/gitleaks/gitleaks)
-- **Governance:** [GovLLM](https://github.com/JehanneDussert/govllm),
-  [IBM ai-atlas-nexus](https://github.com/IBM/ai-atlas-nexus)
-- **Monitoring:** [Elastic (ELK) Stack](https://elastic.co), [OpenSearch](https://opensearch.org)
+| Category | Tools |
+|---|---|
+| **Discovery** | [AIOStack](https://github.com/aurva-io/AIOstack) (Kubernetes/eBPF), [agent-discover-scanner](https://github.com/Defend-AI-Tech-Inc/agent-discover-scanner), [AI-Detector](https://github.com/shamo0/AI-Detector) (MDM/endpoint), [Zeek](https://zeek.org) / [Suricata](https://suricata.io) (network SNI/JA3) |
+| **DLP** | [aidlp](https://github.com/fabriziosalmi/aidlp), [llmproxy](https://github.com/fabriziosalmi/llmproxy), [Microsoft Presidio](https://github.com/microsoft/presidio), [OpenDLP](https://github.com/ezarko/opendlp), [MyDLP](https://github.com/mydlp/mydlp) |
+| **Secrets hygiene** | [trufflehog](https://github.com/trufflesecurity/trufflehog), [gitleaks](https://github.com/gitleaks/gitleaks) |
+| **Governance** | [GovLLM](https://github.com/JehanneDussert/govllm), [IBM ai-atlas-nexus](https://github.com/IBM/ai-atlas-nexus) |
+| **Monitoring** | [Elastic (ELK) Stack](https://elastic.co), [OpenSearch](https://opensearch.org) |
 
 ## Legal and ethical notes
 

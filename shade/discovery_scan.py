@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-discovery_scan.py
+shade/discovery_scan.py
 Phase 2 of Project SHADE, see paper Section 8.2.
 
 IMPORTANT: this module does NOT perform independent AI-destination
@@ -18,7 +18,7 @@ This script operates on the CSV produced by generate_synthetic_data.py,
 not on live network traffic, and makes no network calls of its own.
 
 Usage:
-    python discovery_scan.py --in output/synthetic_usage.csv --out output/discovery_report.json
+    python3 shade/discovery_scan.py --in output/synthetic_usage.csv --out output/discovery_report.json
 """
 import argparse
 import json

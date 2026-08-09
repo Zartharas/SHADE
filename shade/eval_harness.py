@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-eval_harness.py
+shade/eval_harness.py
 Expanded evaluation harness for Project SHADE's DLP redaction layer
 (dlp_redact.py, paper Section 5.2).
 
@@ -27,7 +27,7 @@ a pre-generated ground-truth label rather than performing independent
 detection, so scoring it against that same label would be circular.
 
 Usage:
-    python eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json
+    python3 shade/eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json
 """
 import argparse
 import json
