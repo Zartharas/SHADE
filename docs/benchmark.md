@@ -21,6 +21,20 @@ are all 1.0, with zero false positives or false negatives across all four
 pattern types (see `experiments/output/dlp_benchmark_report.json` after
 running `python3 eval_harness.py`).
 
+**Multi-seed check.** Since a single seed could in principle be a lucky
+draw rather than a representative one, the same benchmark was regenerated
+and rescored at five different seeds (42, 1, 7, 99, 12345; 300 samples
+each). All five produced micro-averaged precision/recall/F1 of 1.0 with
+zero false positives or false negatives across all four pattern types
+(verified on the maintainer's own machine, independent of the sandbox
+this harness was originally developed in -- see `docker run --rm shade
+python3 eval_harness.py --seed <N>` to reproduce, or run natively with
+`for s in 1 7 99 12345; do python3 eval_harness.py --n 300 --seed $s;
+done`). This rules out "seed=42 happened to be favorable" as an
+explanation for the result; it does NOT rule out the scope limitation
+below, which is a property of what the benchmark tests for, not which
+seed generated it.
+
 **A perfect score here is a statement about this benchmark's current
 scope, not a claim that the regexes are robust in general.** The benchmark
 set currently covers clean structural variation (spacing, punctuation,
