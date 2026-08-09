@@ -15,7 +15,7 @@ Dropbox accounts, unapproved SaaS tools, unmanaged devices) outside IT's
 visibility and approval process. The governance response that emerged over
 roughly two decades of Shadow IT research and tooling -- network/endpoint
 discovery, CASB-style inventory, sanctioning workflows -- is the model
-SHADE's `discovery_scan.py` and `config/known_endpoints.yaml` are
+SHADE's `shade/discovery_scan.py` and `config/known_endpoints.yaml` are
 structurally descended from: find what's running, classify it,
 sanction-or-block it.
 
@@ -56,7 +56,7 @@ Putting the two together, three concrete differences both sources point to:
    broader than technical discovery alone. This matches SHADE's own
    Discover-then-Govern ordering (see `docs/theory.md`'s
    "visibility/implementation gap" section) but also implies that
-   discovery/inventory (what `discovery_scan.py` and
+   discovery/inventory (what `shade/discovery_scan.py` and
    `config/known_endpoints.yaml` illustrate) is necessary, not sufficient
    -- consistent with why SHADE's pipeline doesn't stop at Discover and
    adds a Govern stage with explainable, per-decision reasoning
@@ -68,10 +68,10 @@ Putting the two together, three concrete differences both sources point to:
 SHADE's architecture is explicitly a Shadow-IT-style discovery-plus-policy
 pipeline (`config/known_endpoints.yaml` is a hand-maintained tool registry,
 structurally similar to a CASB inventory) extended with governance logic
-aimed at the Shadow-AI-specific risk both sources describe: `dlp_redact.py`
+aimed at the Shadow-AI-specific risk both sources describe: `shade/dlp_redact.py`
 targets disclosure risk directly (DART's Unintentional Disclosure Risk
 construct, see `docs/theory.md`), and the explainability work in
-`governance_score.py` is a narrow, code-level response to the "opaque"/
+`shade/governance_score.py` is a narrow, code-level response to the "opaque"/
 "black box" characterization both sources apply to Shadow AI specifically
 -- SHADE's own governance layer now explains itself, as a small
 counter-example to the pattern both papers describe, though this in no way

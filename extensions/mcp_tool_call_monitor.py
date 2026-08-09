@@ -27,7 +27,7 @@ SCOPE, DELIBERATELY LIMITED:
   network call is made -- same offline/zero-budget property as the rest
   of this repository.
 - This models METHOD-LEVEL risk classification (read/write/execute) as
-  the primary new signal, reusing dlp_redact.py's existing regex patterns
+  the primary new signal, reusing shade/dlp_redact.py's existing regex patterns
   on the (synthetic) argument text as a secondary signal -- it does not
   attempt session-level agent behavior analysis, multi-step plan
   reasoning, or detection of an agent chaining calls to achieve an effect
@@ -51,7 +51,7 @@ from datetime import datetime, timedelta
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from faker import Faker
-from dlp_redact import redact_text
+from shade.dlp_redact import redact_text
 from extensions._verification_core import verify_arbitrary_matrix
 
 # Synthetic MCP server/method registry -- illustrative only, same spirit as
@@ -76,7 +76,7 @@ DATA_SENSITIVITY_LEVELS = ("public", "sensitive", "critical")
 
 # New decision matrix for the tool-call domain: (method_risk_class,
 # data_sensitivity) -> action. Author-designed for this scaffold, modeled
-# on the same severity logic as governance_score.py's matrix (paper
+# on the same severity logic as shade/governance_score.py's matrix (paper
 # Section 4.4) but NOT identical to it -- execute-class actions against
 # critical data are blocked outright, matching the intuition that an
 # agent executing an irreversible action against sensitive data is at

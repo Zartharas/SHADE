@@ -9,7 +9,7 @@ rather than duplicating it (duplicated verification logic would undercut
 the "single auditable source of truth" reasoning in
 docs/adr/0001-formal-verification-of-governance-matrix.md).
 
-Same method as ADR 0001 and verify_policy.py: exhaustive enumeration over
+Same method as ADR 0001 and shade/verify_policy.py: exhaustive enumeration over
 a finite two-axis domain. Still the right tool as long as the domain stays
 a flat table with no combinators -- see that ADR for when to reconsider.
 """

@@ -17,12 +17,14 @@ import argparse
 import csv
 import json
 import os
+import sys
 
-import generate_synthetic_data as gen
-import discovery_scan as discovery
-import dlp_redact as dlp
-import governance_score as gov
-import build_dashboard as dash
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import shade.generate_synthetic_data as gen
+import shade.discovery_scan as discovery
+import shade.dlp_redact as dlp
+import shade.governance_score as gov
+import shade.build_dashboard as dash
 
 
 def write_csv(rows, path):
@@ -37,7 +39,10 @@ def main():
     ap.add_argument("--n", type=int, default=2000, help="Number of synthetic events to generate.")
     args = ap.parse_args()
 
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    # Repo root, not this file's own directory (shade/) -- this script now
+    # lives one level deeper than it used to, so relative paths like
+    # "config/known_endpoints.yaml" and "output/..." need the parent dir.
+    os.chdir(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     os.makedirs("output", exist_ok=True)
 
     # Phase 1: generate
@@ -104,7 +109,7 @@ Generated events: {args.n}
 - This shows the implemented table returns the expected action for each generated
   combination; it does not establish that the matrix is calibrated for any particular
   organization, legal regime, or threat environment. The matrix's completeness and
-  non-conflict ARE formally verified (see verify_policy.py and
+  non-conflict ARE formally verified (see shade/verify_policy.py and
   docs/adr/0001-formal-verification-of-governance-matrix.md) -- that verifies the
   table is well-formed, not that its policy choices are the right ones for any
   given context.

@@ -8,7 +8,7 @@ distribution, department-level breakdowns), not to the per-event
 classification step itself.
 
 WHY AGGREGATE REPORTING, NOT THE CLASSIFICATION STEP -- A SCOPING
-DECISION, STATED EXPLICITLY: governance_score.py's per-event decide() is a
+DECISION, STATED EXPLICITLY: shade/governance_score.py's per-event decide() is a
 deterministic lookup over a verified, complete decision table (ADR 0001);
 there's no statistical query there to add DP noise to -- every event gets
 exactly the action the (verified, auditable) matrix specifies, and adding
@@ -67,8 +67,8 @@ import sys
 from collections import Counter
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from generate_synthetic_data import generate as generate_events
-from governance_score import score_events
+from shade.generate_synthetic_data import generate as generate_events
+from shade.governance_score import score_events
 
 
 def laplace_noise(scale, rng):

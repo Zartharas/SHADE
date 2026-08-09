@@ -9,17 +9,17 @@ their own right. This document is the honest accounting of what that means
 for each.
 
 All three live in `extensions/`, are standalone (importable and runnable
-independently), and are **not wired into `run_pipeline.py` or
-`test_pipeline.py`** -- they don't change the core pipeline's documented
+independently), and are **not wired into `shade/run_pipeline.py` or
+`tests/test_pipeline.py`** -- they don't change the core pipeline's documented
 behavior, and none of their claims should be read as claims about the core
 SHADE pipeline itself.
 
 ```mermaid
 flowchart TB
-    subgraph core["Core pipeline (tested, wired into run_pipeline.py)"]
-        GS[governance_score.py<br/>DECISION_MATRIX] --> VP[verify_policy.py<br/>exhaustive verification]
-        DR[dlp_redact.py<br/>PATTERNS]
-        GEN[generate_synthetic_data.py]
+    subgraph core["Core pipeline (tested, wired into shade/run_pipeline.py)"]
+        GS[shade/governance_score.py<br/>DECISION_MATRIX] --> VP[shade/verify_policy.py<br/>exhaustive verification]
+        DR[shade/dlp_redact.py<br/>PATTERNS]
+        GEN[shade/generate_synthetic_data.py]
     end
     subgraph ext["extensions/ (standalone, CI-smoke-tested only)"]
         LLM[llm_policy_proposer.py<br/>propose -> verify -> human review]
@@ -43,9 +43,9 @@ property and cost real money. What's implemented instead: a pluggable
 `PolicyProposerBackend` interface with one shipped implementation
 (`HeuristicMockBackend`, deterministic and offline) that produces a
 plausible-shaped policy proposal, which then passes through a **formal
-verification gate** (generalized from `verify_policy.py`'s method to an
+verification gate** (generalized from `shade/verify_policy.py`'s method to an
 arbitrary two-axis domain) before being written out as a candidate for
-human review. It is never auto-applied to `governance_score.py`.
+human review. It is never auto-applied to `shade/governance_score.py`.
 
 **What this demonstrates:** the propose -> verify -> human-review pipeline
 mechanics, and that the verification gate genuinely rejects bad proposals
@@ -62,7 +62,7 @@ Extends SHADE's monitoring concept from chat-tool prompt text to agent
 tool-calls (the MCP telemetry shape: server + method + arguments), with
 governance decisions based primarily on method-level risk classification
 (read/write/execute) rather than only regex-detectable content in
-arguments -- reusing `dlp_redact.py`'s patterns as a secondary signal. Uses
+arguments -- reusing `shade/dlp_redact.py`'s patterns as a secondary signal. Uses
 a new, separately verified decision matrix
 (`method_risk_class x data_sensitivity`), formally checked with the same
 shared verification helper (`extensions/_verification_core.py`) the first
@@ -104,8 +104,8 @@ would have re-violated the "one, properly scoped" principle a second time).
 ## Common thread across all three
 
 Every extension reuses rather than reimplements core-pipeline logic where
-possible (dlp_redact.py's patterns, the exhaustive-enumeration
-verification method from ADR 0001, generate_synthetic_data.py's event
+possible (shade/dlp_redact.py's patterns, the exhaustive-enumeration
+verification method from ADR 0001, shade/generate_synthetic_data.py's event
 generator) and is explicit about what it does not claim. None of them
 should be cited as validated research contributions without the caveats
 above; they are scaffolds for future, separately-scoped work.

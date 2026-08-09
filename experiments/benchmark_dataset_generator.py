@@ -4,12 +4,12 @@ experiments/benchmark_dataset_generator.py
 
 Scaffold for a future, standalone dataset-paper candidate: a larger, more
 STRUCTURALLY diverse synthetic Shadow AI usage dataset than
-generate_synthetic_data.py produces. 100% Faker-generated; no real
+shade/generate_synthetic_data.py produces. 100% Faker-generated; no real
 organizational, employee, or customer data is used or referenced anywhere
 in this script or its output, consistent with the rest of this repository.
 
 WHAT "STRUCTURAL DIVERSITY" MEANS HERE, CONCRETELY (this is the part
-generate_synthetic_data.py doesn't attempt, by design -- that script
+shade/generate_synthetic_data.py doesn't attempt, by design -- that script
 produces one consistent record shape sized for the core pipeline demo):
 
   1. Multiple organizational SCENARIO PROFILES (startup / enterprise /
@@ -31,9 +31,9 @@ produces one consistent record shape sized for the core pipeline demo):
      uniformly US-English-shaped -- still entirely synthetic, just more
      structurally varied.
 
-STATUS: standalone scaffold, NOT wired into run_pipeline.py or the core
+STATUS: standalone scaffold, NOT wired into shade/run_pipeline.py or the core
 test suite. Wiring a new dataset generator into the reference pipeline
-would change run_pipeline.py's documented output shape and the numbers in
+would change shade/run_pipeline.py's documented output shape and the numbers in
 README/docs/benchmark.md; that's out of scope for this scaffold and would
 need its own review pass first. This module is meant to be run and
 inspected on its own, as the starting point for a future, separate
@@ -102,7 +102,7 @@ def build_prompt(fake, template, sensitivity):
     """
     Structurally distinct prompt shapes per template, with injection rate
     and content still keyed to the sensitivity label (same ground-truth
-    principle as generate_synthetic_data.py: dlp_redact.py has a real
+    principle as shade/generate_synthetic_data.py: shade/dlp_redact.py has a real
     pattern to find when sensitivity implies one should be there).
     """
     injected = []
@@ -205,7 +205,7 @@ def summarize(rows):
             "scenario profiles (startup/enterprise/regulated_industry). No "
             "real organizational, employee, or customer data. Scenario "
             "weights are simulation parameters, not measured real-world "
-            "statistics. Standalone scaffold, not wired into run_pipeline.py."
+            "statistics. Standalone scaffold, not wired into shade/run_pipeline.py."
         ),
     }
 

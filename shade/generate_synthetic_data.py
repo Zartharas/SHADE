@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 generate_synthetic_data.py
-Phase 1 of Project SHADE (Shadow Hunt, Assess, Decide, Enforce), see paper Section 8.1.
+Phase 1 of Project SHADE (Scan, Hunt, Assess, Decide, Enforce), see paper Section 8.1.
 
 Generates a fully SYNTHETIC dataset of employee AI-tool-usage events using
 the Faker library. No real organizational, employee, or customer data is

@@ -1,15 +1,15 @@
 # Benchmark scope and results
 
-This document states plainly what `eval_harness.py` and `verify_policy.py`
+This document states plainly what `shade/eval_harness.py` and `shade/verify_policy.py`
 measure and, more importantly, what they do not.
 
 ## What is measured
 
-**DLP redaction (`eval_harness.py`).** Precision, recall, and F1 of the
-four regex patterns in `dlp_redact.py` (email, phone, SSN-shaped,
+**DLP redaction (`shade/eval_harness.py`).** Precision, recall, and F1 of the
+four regex patterns in `shade/dlp_redact.py` (email, phone, SSN-shaped,
 fake-API-key-shaped) against a purpose-built synthetic benchmark set of
 300 samples (fixed seed 42, reproducible). The benchmark set is generated
-by `eval_harness.py` itself, independently of `generate_synthetic_data.py`,
+by `shade/eval_harness.py` itself, independently of `shade/generate_synthetic_data.py`,
 and includes: structural variants of each true-positive pattern (different
 email/phone formatting conventions, different API-key-length examples),
 deliberate near-miss distractors that should NOT match a look-alike pattern
@@ -19,7 +19,7 @@ prefixes), and clean filler text with no pattern present at all.
 Current result at n=300, seed=42: micro-averaged precision, recall, and F1
 are all 1.0, with zero false positives or false negatives across all four
 pattern types (see `experiments/output/dlp_benchmark_report.json` after
-running `python3 eval_harness.py`).
+running `python3 shade/eval_harness.py`).
 
 **Multi-seed check.** Since a single seed could in principle be a lucky
 draw rather than a representative one, the same benchmark was regenerated
@@ -28,8 +28,8 @@ each). All five produced micro-averaged precision/recall/F1 of 1.0 with
 zero false positives or false negatives across all four pattern types
 (verified on the maintainer's own machine, independent of the sandbox
 this harness was originally developed in -- see `docker run --rm shade
-python3 eval_harness.py --seed <N>` to reproduce, or run natively with
-`for s in 1 7 99 12345; do python3 eval_harness.py --n 300 --seed $s;
+python3 shade/eval_harness.py --seed <N>` to reproduce, or run natively with
+`for s in 1 7 99 12345; do python3 shade/eval_harness.py --n 300 --seed $s;
 done`). This rules out "seed=42 happened to be favorable" as an
 explanation for the result; it does NOT rule out the scope limitation
 below, which is a property of what the benchmark tests for, not which
@@ -46,7 +46,7 @@ to evade regex matching. Those are natural next benchmark tiers (see
 "Future work" below) and would very plausibly surface recall gaps that
 this version of the harness cannot detect, since it wasn't designed to.
 
-**Governance decision matrix (`verify_policy.py`).** Formal, exhaustive
+**Governance decision matrix (`shade/verify_policy.py`).** Formal, exhaustive
 verification (not a precision/recall metric) that the 3x3 decision table
 is complete and non-conflicting -- see
 `docs/adr/0001-formal-verification-of-governance-matrix.md` for why this
@@ -64,7 +64,7 @@ making predictions against ground truth).
   domain-specific text. The paper's Data availability statement is
   correct that no real data is used anywhere in this repository, including
   in this harness.
-- **Discovery accuracy.** `discovery_scan.py` reads a pre-generated
+- **Discovery accuracy.** `shade/discovery_scan.py` reads a pre-generated
   ground-truth sanctioned/unsanctioned label rather than performing
   independent detection (network telemetry, endpoint agents), so scoring
   it against that same label would be circular and is not attempted.
@@ -81,9 +81,9 @@ making predictions against ground truth).
 ## Reproducing these numbers
 
 ```bash
-python3 eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json
-python3 verify_policy.py
-python3 test_pipeline.py   # runs both as part of CI-equivalent checks, with threshold assertions
+python3 shade/eval_harness.py --n 300 --seed 42 --out experiments/output/dlp_benchmark_report.json
+python3 shade/verify_policy.py
+python3 tests/test_pipeline.py   # runs both as part of CI-equivalent checks, with threshold assertions
 ```
 
 `experiments/dlp_benchmark_config.json` records the parameters (n, seed,
@@ -97,4 +97,4 @@ F1 thresholds) used in CI so a future contributor can see at a glance what
 - If regex recall gaps are found on harder tiers, evaluating whether an
   ML-based recognizer (e.g. Presidio/spaCy, as the production tools cited
   in the README already use) closes them -- measured, not assumed, per the
-  existing caveat in `dlp_redact.py`'s docstring.
+  existing caveat in `shade/dlp_redact.py`'s docstring.

@@ -21,5 +21,5 @@ COPY . .
 # Run the formal-verification + evaluation-harness checks by default so a
 # failed build/run surfaces regressions immediately; override the command
 # to run the full pipeline instead, e.g.:
-#   docker run --rm shade python3 run_pipeline.py --n 2000
-CMD ["python3", "test_pipeline.py"]
+#   docker run --rm shade python3 shade/run_pipeline.py --n 2000
+CMD ["python3", "tests/test_pipeline.py"]

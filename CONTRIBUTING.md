@@ -8,8 +8,8 @@ outside contributors at scale.
 ## Ground rules
 
 - **Synthetic data only.** Every input to this pipeline must originate
-  from `generate_synthetic_data.py` (Faker-based) or from a benchmark
-  generator like `eval_harness.py`'s own dataset builder. Do not add code
+  from `shade/generate_synthetic_data.py` (Faker-based) or from a benchmark
+  generator like `shade/eval_harness.py`'s own dataset builder. Do not add code
   paths that read, request, or simulate real organizational, employee, or
   customer data at any stage -- this is a hard constraint tied to the
   paper's Data availability and Ethics statements, not just a style
@@ -28,17 +28,17 @@ outside contributors at scale.
 - **One implementation, shared by CLI and orchestrator.** Each phase's
   logic (discovery, DLP, governance, dashboard) should exist once, as
   functions called by both that phase's own `--help`-able CLI and
-  `run_pipeline.py`. Don't fork the logic to add a feature to only one
+  `shade/run_pipeline.py`. Don't fork the logic to add a feature to only one
   entry point.
 
 ## Before opening a change
 
-1. Run the self-check: `python3 test_pipeline.py`. All checks must pass,
-   including the formal verification (`verify_policy.py`) and DLP
-   evaluation harness (`eval_harness.py`) thresholds.
-2. Run the full pipeline smoke test: `python3 run_pipeline.py --n 500`.
+1. Run the self-check: `python3 tests/test_pipeline.py`. All checks must pass,
+   including the formal verification (`shade/verify_policy.py`) and DLP
+   evaluation harness (`shade/eval_harness.py`) thresholds.
+2. Run the full pipeline smoke test: `python3 shade/run_pipeline.py --n 500`.
 3. If Docker is available locally, `docker build -t shade .` and
-   `docker run --rm shade python3 test_pipeline.py` for an environment-
+   `docker run --rm shade python3 tests/test_pipeline.py` for an environment-
    independent check (see `Dockerfile`).
 4. If the change touches a security- or governance-relevant decision (the
    decision matrix, DLP patterns, or anything with a "this could silently
@@ -59,7 +59,7 @@ encoding) if that happens.
 
 ## Extending the evaluation harness
 
-New benchmark cases in `eval_harness.py` should include both true
+New benchmark cases in `shade/eval_harness.py` should include both true
 positives (with structural variation, not copies of existing ones) and
 near-miss distractors that could plausibly false-positive a different
 pattern. Keep `docs/benchmark.md` in sync with any change to what is or
@@ -69,16 +69,16 @@ from silently implying more than it proves as it grows.
 ## Working in extensions/
 
 `extensions/` holds optional, standalone prototypes -- not part of the
-core pipeline, not covered by `test_pipeline.py`, and each explicitly
+core pipeline, not covered by `tests/test_pipeline.py`, and each explicitly
 scoped in `docs/extensions.md` (what it demonstrates and what it doesn't).
 If you touch one:
 
 - Keep it standalone. Don't add imports from `extensions/` into
-  `run_pipeline.py`, `test_pipeline.py`, or any core-pipeline module --
+  `shade/run_pipeline.py`, `tests/test_pipeline.py`, or any core-pipeline module --
   that would silently change what the documented, tested pipeline does.
 - Reuse core logic where it genuinely fits (as the existing three do:
-  `dlp_redact.py`'s patterns, the exhaustive-enumeration verification
-  method from ADR 0001, `generate_synthetic_data.py`'s generator) instead
+  `shade/dlp_redact.py`'s patterns, the exhaustive-enumeration verification
+  method from ADR 0001, `shade/generate_synthetic_data.py`'s generator) instead
   of reimplementing it.
 - Update `docs/extensions.md`'s scope/status section for whatever you
   changed -- the point of that document is to prevent a scaffold from

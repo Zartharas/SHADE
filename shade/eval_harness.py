@@ -33,8 +33,10 @@ import argparse
 import json
 import os
 import random
+import sys
 
-from dlp_redact import redact_text
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shade.dlp_redact import redact_text
 
 # ---------------------------------------------------------------------------
 # Benchmark dataset generator: structurally varied synthetic sentences with

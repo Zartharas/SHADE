@@ -27,16 +27,16 @@ resolved.
 
 ## SHADE's four stages, briefly
 
-`generate_synthetic_data.py` (N/A -- data generation only) feeds:
-1. **Discover** (`discovery_scan.py`) -- reads a ground-truth label and
+`shade/generate_synthetic_data.py` (N/A -- data generation only) feeds:
+1. **Discover** (`shade/discovery_scan.py`) -- reads a ground-truth label and
    reports sanctioned/unsanctioned tool-use split.
-2. **Classify** (`dlp_redact.py` + the `tool_risk`/`data_sensitivity`
+2. **Classify** (`shade/dlp_redact.py` + the `tool_risk`/`data_sensitivity`
    labels used downstream) -- regex-based sensitive-pattern detection and
    risk-tier labeling.
-3. **Govern** (`governance_score.py`) -- the Section 4.4 decision matrix,
-   now with formal verification (`verify_policy.py`) and per-decision
+3. **Govern** (`shade/governance_score.py`) -- the Section 4.4 decision matrix,
+   now with formal verification (`shade/verify_policy.py`) and per-decision
    explanations (`decide_with_reason()`).
-4. **Validate** (`build_dashboard.py`, `test_pipeline.py`,
+4. **Validate** (`shade/build_dashboard.py`, `tests/test_pipeline.py`,
    `VALIDATION_REPORT.md`) -- internal consistency checks and a static
    dashboard, not independent real-world validation (see
    `docs/benchmark.md` for exactly what is and isn't measured here).
@@ -86,7 +86,7 @@ Loops.
 
 **Genuinely applicable:**
 
-- **Unintentional Disclosure Risk** maps directly onto `dlp_redact.py`'s
+- **Unintentional Disclosure Risk** maps directly onto `shade/dlp_redact.py`'s
   purpose -- detecting API-key-shaped strings, emails, SSN-shaped strings,
   and phone numbers in prompt text is a concrete, narrow instance of
   exactly this construct.

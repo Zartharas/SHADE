@@ -1,18 +1,23 @@
 #!/usr/bin/env python3
 """
-test_pipeline.py
+tests/test_pipeline.py
 Three focused internal checks for the two places in Project SHADE with
 actual branching/security-relevant logic: the governance decision matrix
 (paper Section 4.4) and the DLP redaction patterns (Section 5.2).
 Not a full test suite -- just enough to fail loudly if either breaks.
 
 Usage:
-    python test_pipeline.py
+    python tests/test_pipeline.py       # from repo root
+    python -m tests.test_pipeline       # equivalent, module form
 """
-from governance_score import decide, decide_with_reason
-from dlp_redact import redact_text
-import verify_policy
-import eval_harness
+import os
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shade.governance_score import decide, decide_with_reason
+from shade.dlp_redact import redact_text
+import shade.verify_policy as verify_policy
+import shade.eval_harness as eval_harness
 
 
 def test_decision_matrix_covers_every_cell():

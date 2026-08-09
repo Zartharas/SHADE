@@ -6,7 +6,7 @@ Accepted — 2026-08-08
 
 ## Context
 
-`governance_score.py`'s `DECISION_MATRIX` encodes the paper's Section 4.4
+`shade/governance_score.py`'s `DECISION_MATRIX` encodes the paper's Section 4.4
 decision table as a Python dict keyed on `(tool_risk, data_sensitivity)`,
 with `tool_risk in {high, medium, low}` and `data_sensitivity in {critical,
 sensitive, public}` — a 3x3 domain, 9 cells, mapping to one of 5 governance
@@ -51,7 +51,7 @@ attribute hierarchy.
 Verify the matrix by **exhaustive enumeration over the finite domain**,
 not a SAT/SMT solver.
 
-Concretely: `verify_policy.py` enumerates all 9 `(tool_risk,
+Concretely: `shade/verify_policy.py` enumerates all 9 `(tool_risk,
 data_sensitivity)` pairs and asserts, for each one, that `DECISION_MATRIX`
 contains an explicit entry (completeness — the fallback path is never
 exercised) and that the corresponding action is a member of the fixed
@@ -93,7 +93,7 @@ faster on a search space of size 9.
 
 ## Consequences
 
-- `verify_policy.py` has no new dependencies; it runs with the standard
+- `shade/verify_policy.py` has no new dependencies; it runs with the standard
   library, consistent with `requirements.txt` and the project's zero-budget
   framing.
 - The verification is provably complete for the current 3x3 domain. If the
@@ -106,7 +106,7 @@ faster on a search space of size 9.
   over the finite decision domain (equivalent to explicit-state model
   checking at this scale)," not as "SAT-based formal verification" — the
   latter would overclaim the technique actually used.
-- `test_pipeline.py` calls `verify_policy.run_all_checks()` so CI fails
+- `tests/test_pipeline.py` calls `verify_policy.run_all_checks()` so CI fails
   loudly if the matrix is ever edited into an incomplete or malformed
   state, rather than relying on the pre-existing test that just
   re-asserted the same table.

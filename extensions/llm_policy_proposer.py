@@ -5,12 +5,12 @@ extensions/llm_policy_proposer.py
 Scoped prototype: an LLM PROPOSES changes/additions to the governance
 decision matrix (e.g. a new data_sensitivity tier, or a rationale for
 reconsidering an existing cell); the proposal is NEVER auto-applied. It
-must pass a formal verification gate (generalized from verify_policy.py's
+must pass a formal verification gate (generalized from shade/verify_policy.py's
 method) before being written out as a reviewable candidate matrix, and a
-human must manually copy it into governance_score.py to adopt it. This is
+human must manually copy it into shade/governance_score.py to adopt it. This is
 the guardrail: formal verification catches structural defects (missing
 cells, conflicting actions, unknown action labels) that an LLM proposal
-could introduce, exactly the failure mode verify_policy.py exists to catch
+could introduce, exactly the failure mode shade/verify_policy.py exists to catch
 for the hand-authored matrix.
 
 SCOPE, DELIBERATELY LIMITED:
@@ -33,7 +33,7 @@ SCOPE, DELIBERATELY LIMITED:
   good policy. It claims only that IF an LLM (or anything else) proposes a
   policy, that proposal can be mechanically checked for the same
   structural properties (completeness, non-conflict, known-action
-  vocabulary) verify_policy.py already checks for the hand-authored
+  vocabulary) shade/verify_policy.py already checks for the hand-authored
   matrix -- extended here to work over an arbitrary domain, not just the
   fixed 3x3 one.
 
@@ -54,8 +54,8 @@ import sys
 from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from governance_score import DECISION_MATRIX, DECISION_REASONS
-from verify_policy import KNOWN_ACTIONS, TOOL_RISK_LEVELS, DATA_SENSITIVITY_LEVELS
+from shade.governance_score import DECISION_MATRIX, DECISION_REASONS
+from shade.verify_policy import KNOWN_ACTIONS, TOOL_RISK_LEVELS, DATA_SENSITIVITY_LEVELS
 from extensions._verification_core import verify_arbitrary_matrix
 
 
@@ -135,7 +135,7 @@ class HeuristicMockBackend(PolicyProposerBackend):
 
 # ---------------------------------------------------------------------------
 # Orchestration: propose -> verify -> write reviewable candidate file.
-# Never touches governance_score.py.
+# Never touches shade/governance_score.py.
 # ---------------------------------------------------------------------------
 def propose_and_verify(context, backend=None, extra_axis1=None, extra_axis2=None, out_path="experiments/output/policy_proposal.json"):
     backend = backend or HeuristicMockBackend()
@@ -163,7 +163,7 @@ def propose_and_verify(context, backend=None, extra_axis1=None, extra_axis2=None
         },
         "status": "REJECTED_FAILED_VERIFICATION" if violations else "CANDIDATE_PENDING_HUMAN_REVIEW",
         "note": (
-            "This proposal was NOT applied to governance_score.py. A human "
+            "This proposal was NOT applied to shade/governance_score.py. A human "
             "must review proposed_matrix/proposed_reasons and manually "
             "update DECISION_MATRIX/DECISION_REASONS if adopted. See "
             "docs/extensions.md for why auto-apply is out of scope."

@@ -1,6 +1,6 @@
 # Project SHADE
 
-**Shadow Hunt, Assess, Decide, Enforce**
+**Scan, Hunt, Assess, Decide, Enforce**
 
 *"Mastering the shadows"*
 
@@ -28,19 +28,19 @@ organizational, employee, or customer data at any stage.
 
 ```mermaid
 flowchart LR
-    A[generate_synthetic_data.py<br/><sub>Faker, 100% synthetic</sub>] --> B[discovery_scan.py<br/><sub>Discover: sanctioned split</sub>]
-    B --> C[dlp_redact.py<br/><sub>Classify: DLP + risk tier</sub>]
-    C --> D[governance_score.py<br/><sub>Govern: verified decision matrix</sub>]
-    D --> E[build_dashboard.py<br/><sub>Validate: harness + report</sub>]
-    F[verify_policy.py<br/><sub>formal verification gate</sub>] -.guards.-> D
-    G[eval_harness.py<br/><sub>DLP precision/recall/F1</sub>] -.checks.-> C
+    A[shade/generate_synthetic_data.py<br/><sub>Faker, 100% synthetic</sub>] --> B[shade/discovery_scan.py<br/><sub>Discover: sanctioned split</sub>]
+    B --> C[shade/dlp_redact.py<br/><sub>Classify: DLP + risk tier</sub>]
+    C --> D[shade/governance_score.py<br/><sub>Govern: verified decision matrix</sub>]
+    D --> E[shade/build_dashboard.py<br/><sub>Validate: harness + report</sub>]
+    F[shade/verify_policy.py<br/><sub>formal verification gate</sub>] -.guards.-> D
+    G[shade/eval_harness.py<br/><sub>DLP precision/recall/F1</sub>] -.checks.-> C
 ```
 
 <p align="center">
   <img src="docs/example_dashboard.png" alt="SHADE monitoring dashboard: discovery tool-class split, top AI tools by event volume, DLP sensitive-pattern hits by type, and governance decision-matrix outcomes, all on synthetic data" width="820">
 </p>
 
-<p align="center"><sub>Output of <code>python3 run_pipeline.py --n 2000</code> against the reference synthetic dataset (fixed seed). Regenerate anytime — see Quick start below.</sub></p>
+<p align="center"><sub>Output of <code>python3 shade/run_pipeline.py --n 2000</code> against the reference synthetic dataset (fixed seed). Regenerate anytime — see Quick start below.</sub></p>
 
 ## What this is, and isn't
 
@@ -57,23 +57,32 @@ storage, maintenance, and development time still carry real operational cost.
 
 | SHADE module | Relationship to production tooling | Paper section |
 |---|---|---|
-| `generate_synthetic_data.py` | N/A: synthetic data generation only | 8.1 |
-| `discovery_scan.py` | Reads a generated ground-truth label; does not perform independent detection like Zeek / Suricata (SNI/JA3), AIOStack (eBPF), or agent-discover-scanner | 3, 8.2 |
-| `dlp_redact.py` | Regex-only; illustrates the pattern used by aidlp / llmproxy (mitmproxy + Presidio/spaCy) without their ML-based recognition | 5.2, 8.3 |
-| `governance_score.py` | Deterministic rule-table lookup, not a stand-in for ML-judge governance tools such as GovLLM or IBM AI Atlas Nexus | 4.4, 8.4 |
-| `build_dashboard.py` | Static local visualization; not a substitute for ELK / OpenSearch | 6, 8.5 |
+| `shade/generate_synthetic_data.py` | N/A: synthetic data generation only | 8.1 |
+| `shade/discovery_scan.py` | Reads a generated ground-truth label; does not perform independent detection like Zeek / Suricata (SNI/JA3), AIOStack (eBPF), or agent-discover-scanner | 3, 8.2 |
+| `shade/dlp_redact.py` | Regex-only; illustrates the pattern used by aidlp / llmproxy (mitmproxy + Presidio/spaCy) without their ML-based recognition | 5.2, 8.3 |
+| `shade/governance_score.py` | Deterministic rule-table lookup, not a stand-in for ML-judge governance tools such as GovLLM or IBM AI Atlas Nexus | 4.4, 8.4 |
+| `shade/build_dashboard.py` | Static local visualization; not a substitute for ELK / OpenSearch | 6, 8.5 |
 
 ## Layout
 
 ```
+shade/        the core package: five pipeline phases + orchestrator (run_pipeline.py)
+              + verification (verify_policy.py) + eval harness (eval_harness.py)
+tests/        test_pipeline.py -- the self-check suite (6 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
-extensions/   optional, standalone prototypes (LLM policy proposer, MCP tool-call monitor, DP reporting) -- not wired into the core pipeline, see docs/extensions.md
+extensions/   optional, standalone prototypes (LLM policy proposer, MCP tool-call monitor, DP reporting) -- not wired into shade/, see docs/extensions.md
 output/       generated pipeline artifacts (gitignored; regenerate anytime)
 paper/        manuscript/submission drafts (gitignored, local-only)
-*.py          the five pipeline phases + orchestrator + verification/eval harness, at repo root
 ```
+
+Every script under `shade/` and `tests/` is runnable two equivalent ways
+from the repo root: directly by path (`python3 shade/run_pipeline.py`) or
+as a module (`python3 -m shade.run_pipeline`) -- both resolve imports and
+relative paths (`config/`, `output/`) the same way. `extensions/` and
+`experiments/` scripts support direct-path execution only (they're
+standalone by design, not part of the `shade` package).
 
 - `docs/theory.md` maps SHADE's four stages against NIST AI RMF, ISO/IEC
   42001, and DART's constructs -- including where a mapping is genuine and
@@ -100,14 +109,14 @@ paper/        manuscript/submission drafts (gitignored, local-only)
 ```bash
 python3 -m venv venv && source venv/bin/activate
 pip install -r requirements.txt        # pinned exact versions; or: pip install -r requirements.txt --break-system-packages
-python3 run_pipeline.py --n 2000
+python3 shade/run_pipeline.py --n 2000
 ```
 
 Or, for an exactly reproducible reference environment:
 
 ```bash
 docker build -t shade .
-docker run --rm -v "$(pwd)/output:/app/output" shade python3 run_pipeline.py --n 2000
+docker run --rm -v "$(pwd)/output:/app/output" shade python3 shade/run_pipeline.py --n 2000
 ```
 
 This produces, in `output/`:
@@ -119,8 +128,8 @@ This produces, in `output/`:
 - `dashboard.png`: four-panel visual summary
 - `VALIDATION_REPORT.md`: Phase 6 internal-checks summary and explicit limitations (filename retained from earlier drafts; the report documents internal checks and stated limitations, not independent validation)
 
-Each script is also runnable independently: run `python3 <script>.py --help`
-for options. `run_pipeline.py` calls each phase's functions directly
+Each script is also runnable independently: run `python3 shade/<script>.py --help`
+for options (or `python3 -m shade.<script> --help`, see "Layout" above). `shade/run_pipeline.py` calls each phase's functions directly
 in-process rather than shelling out, so there's exactly one implementation
 of the discovery/DLP/governance/dashboard logic, shared by the CLI and the
 orchestrator.
@@ -130,14 +139,14 @@ checks DLP redaction patterns, and runs the DLP evaluation harness against
 its precision/recall/F1 thresholds -- see docs/benchmark.md) with:
 
 ```bash
-python3 test_pipeline.py
+python3 tests/test_pipeline.py
 ```
 
 The formal verification and evaluation harness can also be run standalone:
 
 ```bash
-python3 verify_policy.py                                   # governance matrix: completeness + non-conflict
-python3 eval_harness.py --n 300 --seed 42                  # DLP: precision/recall/F1 vs. synthetic ground truth
+python3 shade/verify_policy.py                                   # governance matrix: completeness + non-conflict
+python3 shade/eval_harness.py --n 300 --seed 42                  # DLP: precision/recall/F1 vs. synthetic ground truth
 ```
 
 ## Production tooling (real deployments)
@@ -161,7 +170,7 @@ verified open-source tools cited in the paper:
 
 ## Legal and ethical notes
 
-- All data is synthetic. Do not point `generate_synthetic_data.py`'s output
+- All data is synthetic. Do not point `shade/generate_synthetic_data.py`'s output
   format at a real data-export pipeline without a full legal/privacy review.
 - Deploying TLS-interception (mitmproxy-based) DLP in production requires
   jurisdiction-specific legal review and, in some jurisdictions, works-council

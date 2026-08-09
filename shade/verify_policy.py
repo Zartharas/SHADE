@@ -25,9 +25,12 @@ Usage:
 Exits 0 and prints a report on success; raises AssertionError (nonzero
 exit) with a specific violation on failure.
 """
+import os
+import sys
 from itertools import product
 
-from governance_score import DECISION_MATRIX, DECISION_REASONS, decide
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from shade.governance_score import DECISION_MATRIX, DECISION_REASONS, decide
 
 TOOL_RISK_LEVELS = ("high", "medium", "low")
 DATA_SENSITIVITY_LEVELS = ("critical", "sensitive", "public")
