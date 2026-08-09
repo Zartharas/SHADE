@@ -5,8 +5,6 @@
 # end to end.
 # Previously left as >=; README flagged unpinned deps as an open
 # reproducibility limitation.
-# Previously left as >=; README flagged unpinned deps as an open
-# reproducibility limitation.
 faker==40.36.0
 pandas==2.3.3
 numpy==2.2.6
