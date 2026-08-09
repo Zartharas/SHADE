@@ -62,17 +62,19 @@ storage, maintenance, and development time still carry real operational cost.
 | `shade/dlp_redact.py` | Regex-only; illustrates the pattern used by aidlp / llmproxy (mitmproxy + Presidio/spaCy) without their ML-based recognition | 5.2, 8.3 |
 | `shade/governance_score.py` | Deterministic rule-table lookup, not a stand-in for ML-judge governance tools such as GovLLM or IBM AI Atlas Nexus | 4.4, 8.4 |
 | `shade/build_dashboard.py` | Static local visualization; not a substitute for ELK / OpenSearch | 6, 8.5 |
+| `shade/policy_proposer.py` | Mock-backend policy-change proposer, gated by formal verification, opt-in pipeline stage; not a stand-in for an evaluated LLM-based governance tool -- see docs/extensions.md | new, see docs/adr/0002 |
 
 ## Layout
 
 ```
 shade/        the core package: five pipeline phases + orchestrator (run_pipeline.py)
               + verification (verify_policy.py) + eval harness (eval_harness.py)
-tests/        test_pipeline.py -- the self-check suite (6 checks)
+              + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
+tests/        test_pipeline.py -- the self-check suite (9 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
-extensions/   optional, standalone prototypes (LLM policy proposer, MCP tool-call monitor, DP reporting) -- not wired into shade/, see docs/extensions.md
+extensions/   optional, standalone prototypes (MCP tool-call monitor, DP reporting) -- not wired into shade/, see docs/extensions.md
 output/       generated pipeline artifacts (gitignored; regenerate anytime)
 paper/        manuscript/submission drafts (gitignored, local-only)
 ```
@@ -135,8 +137,10 @@ of the discovery/DLP/governance/dashboard logic, shared by the CLI and the
 orchestrator.
 
 Run the self-check (formally verifies the governance decision matrix,
-checks DLP redaction patterns, and runs the DLP evaluation harness against
-its precision/recall/F1 thresholds -- see docs/benchmark.md) with:
+checks DLP redaction patterns, runs the DLP evaluation harness against its
+precision/recall/F1 thresholds, and exercises the policy proposer's
+verify/guardrail behavior -- see docs/benchmark.md and
+docs/adr/0002-integrating-llm-policy-proposer.md) with:
 
 ```bash
 python3 tests/test_pipeline.py

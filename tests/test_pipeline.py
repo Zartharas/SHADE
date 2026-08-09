@@ -18,6 +18,7 @@ from shade.governance_score import decide, decide_with_reason
 from shade.dlp_redact import redact_text
 import shade.verify_policy as verify_policy
 import shade.eval_harness as eval_harness
+import shade.policy_proposer as policy_proposer
 
 
 def test_decision_matrix_covers_every_cell():
@@ -94,6 +95,49 @@ def test_dlp_evaluation_harness_meets_threshold():
         assert metrics["f1"] is not None and metrics["f1"] >= 0.90, (
             f"{pattern} F1 {metrics['f1']} fell below 0.90 threshold."
         )
+
+
+def test_policy_proposer_default_domain_passes_verification():
+    # shade/policy_proposer.py's HeuristicMockBackend, run over the existing
+    # (unchanged) 3x3 domain, must produce a proposal that passes formal
+    # verification -- this is the "normal, nothing weird" case that should
+    # never fail. See docs/adr/0002-integrating-llm-policy-proposer.md.
+    result = policy_proposer.propose_and_verify("regression test: default domain", out_path=None)
+    assert result["status"] == "CANDIDATE_PENDING_HUMAN_REVIEW"
+    assert result["formal_verification"]["status"] == "PASS"
+    assert result["formal_verification"]["violations"] == []
+
+
+def test_policy_proposer_rejects_a_broken_backend():
+    # Formalizes the guardrail check that was previously only run ad hoc:
+    # a backend that omits a cell and uses an invalid action label must be
+    # REJECTED, not silently written out as a candidate. This is the load-
+    # bearing claim for this module -- that formal verification actually
+    # catches bad proposals, not just well-formed ones.
+    class BrokenBackend(policy_proposer.PolicyProposerBackend):
+        def propose(self, current_matrix, current_reasons, context, axis1_values, axis2_values):
+            proposed = dict(current_matrix)
+            proposed.pop(("low", "public"), None)  # incompleteness
+            proposed[("high", "critical")] = "MAYBE_BLOCK_IDK"  # invalid action
+            return proposed, dict(current_reasons), "deliberately broken test proposal"
+
+    result = policy_proposer.propose_and_verify(
+        "regression test: broken backend", backend=BrokenBackend(), out_path=None
+    )
+    assert result["status"] == "REJECTED_FAILED_VERIFICATION"
+    assert len(result["formal_verification"]["violations"]) == 2
+
+
+def test_policy_proposer_never_mutates_decision_matrix():
+    # The non-negotiable safety property from ADR 0002: no proposal, valid
+    # or broken, is ever applied to the real DECISION_MATRIX. Snapshot it,
+    # run both the normal and broken-backend cases, and confirm it's
+    # byte-for-byte identical afterward.
+    from shade.governance_score import DECISION_MATRIX
+    before = dict(DECISION_MATRIX)
+    policy_proposer.propose_and_verify("mutation check: normal", out_path=None)
+    test_policy_proposer_rejects_a_broken_backend()
+    assert DECISION_MATRIX == before, "DECISION_MATRIX was mutated by a proposal -- this must never happen"
 
 
 def test_dlp_leaves_clean_text_untouched():

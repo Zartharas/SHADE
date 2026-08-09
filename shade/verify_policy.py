@@ -25,6 +25,7 @@ Usage:
 Exits 0 and prints a report on success; raises AssertionError (nonzero
 exit) with a specific violation on failure.
 """
+import itertools
 import os
 import sys
 from itertools import product
@@ -182,6 +183,43 @@ def run_all_checks(verbose=False):
         for k, v in report.items():
             print(f"  {k}: {v}")
     return report
+
+
+
+
+# ---------------------------------------------------------------------------
+# Generalized verification for arbitrary two-axis decision tables (not just
+# DECISION_MATRIX above). Moved here from the now-removed
+# extensions/_verification_core.py (see
+# docs/adr/0002-integrating-llm-policy-proposer.md) so shade/policy_proposer.py
+# doesn't have to import from extensions/ -- a core module depending on
+# optional-extension code would be backwards. extensions/mcp_tool_call_monitor.py
+# (still a standalone extension) also imports this rather than duplicating it.
+#
+# Same method as the rest of this module: exhaustive enumeration over a
+# finite domain. Still the right tool as long as the domain stays a flat
+# two-axis table with no combinators -- see ADR 0001 for when to reconsider.
+# ---------------------------------------------------------------------------
+def verify_arbitrary_matrix(matrix, axis1_values, axis2_values, known_actions):
+    """Returns a list of violation strings; empty = verified complete,
+    well-formed, and non-conflicting over the given two-axis domain."""
+    violations = []
+    domain = set(itertools.product(axis1_values, axis2_values))
+    matrix_keys = set(matrix.keys())
+
+    for cell in domain:
+        if cell not in matrix:
+            violations.append(f"Domain cell {cell} has no explicit entry (would need a fallback).")
+    for key in matrix_keys - domain:
+        violations.append(f"Matrix key {key} is outside the declared domain {sorted(domain)}.")
+    if len(matrix_keys) != len(matrix):
+        violations.append("Matrix has duplicate keys (should be impossible for a dict).")
+    for key, value in matrix.items():
+        action = value[0] if isinstance(value, tuple) else value
+        if action not in known_actions:
+            violations.append(f"Entry {key} -> {action!r} is not in the known action vocabulary {sorted(known_actions)}.")
+
+    return violations
 
 
 if __name__ == "__main__":

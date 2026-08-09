@@ -34,7 +34,7 @@ SCOPE, DELIBERATELY LIMITED:
   no single call would trigger on its own (a real and harder problem,
   explicitly out of scope here).
 - Governance decisions reuse the SAME formal-verification approach as the
-  core matrix (extensions/_verification_core.py, same method as ADR 0001)
+  core matrix (shade/verify_policy.py, same method as ADR 0001; see also ADR 0002)
   over a new (method_risk_class x data_sensitivity) domain -- demonstrating
   that the verification approach generalizes to a second, differently-
   shaped governance table, not just the original one.
@@ -52,7 +52,7 @@ from datetime import datetime, timedelta
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from faker import Faker
 from shade.dlp_redact import redact_text
-from extensions._verification_core import verify_arbitrary_matrix
+from shade.verify_policy import verify_arbitrary_matrix
 
 # Synthetic MCP server/method registry -- illustrative only, same spirit as
 # config/known_endpoints.yaml but for agent tool-calls. method_risk_class
@@ -163,7 +163,7 @@ def main():
     args = ap.parse_args()
 
     # Formally verify the new decision table before using it -- same
-    # guardrail principle as extensions/llm_policy_proposer.py, applied
+    # guardrail principle as shade/policy_proposer.py, applied
     # here to a hand-authored (not LLM-proposed) but still new-this-session
     # matrix, since ADR 0001's reasoning says any matrix should be checked,
     # not just LLM-proposed ones.

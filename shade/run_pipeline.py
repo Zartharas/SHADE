@@ -25,6 +25,7 @@ import shade.discovery_scan as discovery
 import shade.dlp_redact as dlp
 import shade.governance_score as gov
 import shade.build_dashboard as dash
+import shade.policy_proposer as policy_proposer
 
 
 def write_csv(rows, path):
@@ -37,6 +38,14 @@ def write_csv(rows, path):
 def main():
     ap = argparse.ArgumentParser(description="Run the full Shadow AI governance prototype pipeline.")
     ap.add_argument("--n", type=int, default=2000, help="Number of synthetic events to generate.")
+    ap.add_argument("--propose_policy_review", action="store_true", default=False,
+                     help="Opt-in (default off): after governance scoring, run "
+                          "shade/policy_proposer.py's mock backend over this run's own "
+                          "action distribution and write output/policy_proposal.json. "
+                          "Never modifies DECISION_MATRIX -- see "
+                          "docs/adr/0002-integrating-llm-policy-proposer.md. Does not "
+                          "change any other output file when omitted (default pipeline "
+                          "behavior is unchanged).")
     args = ap.parse_args()
 
     # Repo root, not this file's own directory (shade/) -- this script now
@@ -74,6 +83,18 @@ def main():
     fig_path = "output/dashboard.png"
     dash.render(discovery_report, dlp_report, gov_report, fig_path)
     print(f"[5/5] Dashboard -> {fig_path}")
+
+    # Optional stage (opt-in only, see --propose_policy_review above): policy
+    # review proposal. Runs after governance scoring so it has this run's own
+    # action distribution to use as context. Never touches DECISION_MATRIX.
+    if args.propose_policy_review:
+        review_context = (
+            f"Pipeline run of {args.n} events observed action distribution "
+            f"{gov_report['action_distribution']}. Review whether the current "
+            f"matrix's 9 cells still look right given this run's data."
+        )
+        proposal = policy_proposer.propose_and_verify(review_context, out_path="output/policy_proposal.json")
+        print(f"[optional] Policy review proposal: {proposal['status']} -> output/policy_proposal.json")
 
     # Phase 6: internal-checks report (filename retained as VALIDATION_REPORT.md
     # for output-contract stability; title/body describe internal checks and

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """
-extensions/llm_policy_proposer.py
+shade/policy_proposer.py
 
-Scoped prototype: an LLM PROPOSES changes/additions to the governance
+Integrated (see docs/adr/0002-integrating-llm-policy-proposer.md; formerly
+extensions/llm_policy_proposer.py) module: an LLM PROPOSES changes/additions to the governance
 decision matrix (e.g. a new data_sensitivity tier, or a rationale for
 reconsidering an existing cell); the proposal is NEVER auto-applied. It
 must pass a formal verification gate (generalized from shade/verify_policy.py's
@@ -44,7 +45,10 @@ shape HeuristicMockBackend returns. Everything downstream (verification,
 review-file writing) is backend-agnostic already.
 
 Usage (mock backend only, no API key/network required):
-    python extensions/llm_policy_proposer.py --context "add a 'regulated' data_sensitivity tier for GDPR-scoped data"
+    python shade/policy_proposer.py --context "add a 'regulated' data_sensitivity tier for GDPR-scoped data"
+
+Also runs as an opt-in stage of the main pipeline:
+    python shade/run_pipeline.py --n 2000 --propose_policy_review
 """
 import argparse
 import itertools
@@ -55,12 +59,7 @@ from datetime import datetime, timezone
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shade.governance_score import DECISION_MATRIX, DECISION_REASONS
-from shade.verify_policy import KNOWN_ACTIONS, TOOL_RISK_LEVELS, DATA_SENSITIVITY_LEVELS
-from extensions._verification_core import verify_arbitrary_matrix
-
-
-# (verify_arbitrary_matrix now lives in extensions/_verification_core.py,
-# shared with extensions/mcp_tool_call_monitor.py)
+from shade.verify_policy import KNOWN_ACTIONS, TOOL_RISK_LEVELS, DATA_SENSITIVITY_LEVELS, verify_arbitrary_matrix
 
 
 # ---------------------------------------------------------------------------
@@ -137,7 +136,7 @@ class HeuristicMockBackend(PolicyProposerBackend):
 # Orchestration: propose -> verify -> write reviewable candidate file.
 # Never touches shade/governance_score.py.
 # ---------------------------------------------------------------------------
-def propose_and_verify(context, backend=None, extra_axis1=None, extra_axis2=None, out_path="experiments/output/policy_proposal.json"):
+def propose_and_verify(context, backend=None, extra_axis1=None, extra_axis2=None, out_path="output/policy_proposal.json"):
     backend = backend or HeuristicMockBackend()
     axis1_values = list(TOOL_RISK_LEVELS) + list(extra_axis1 or [])
     axis2_values = list(DATA_SENSITIVITY_LEVELS) + list(extra_axis2 or [])
@@ -183,7 +182,7 @@ def main():
     ap.add_argument("--context", type=str, default="no specific context provided", help="Free-text description of what's being proposed/why.")
     ap.add_argument("--add_tool_risk", type=str, default=None, help="Optional new tool_risk-axis value to include in the proposal domain.")
     ap.add_argument("--add_data_sensitivity", type=str, default=None, help="Optional new data_sensitivity-axis value to include in the proposal domain.")
-    ap.add_argument("--out", type=str, default="experiments/output/policy_proposal.json")
+    ap.add_argument("--out", type=str, default="output/policy_proposal.json")
     args = ap.parse_args()
 
     extra_axis1 = [args.add_tool_risk] if args.add_tool_risk else None

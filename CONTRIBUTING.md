@@ -88,6 +88,20 @@ If you touch one:
   what CI checks (a smoke test that it runs without error, not a
   correctness assertion -- these are prototypes, not production code).
 
+## Graduating an extension into shade/
+
+Extensions move from `extensions/` into `shade/` one at a time, each with
+its own ADR (see `docs/adr/0002-integrating-llm-policy-proposer.md` for the
+first one and the template it sets). A graduation ADR should cover: what
+moves and why, what safety property must be preserved (e.g. "never
+auto-applies to DECISION_MATRIX" for the policy proposer), whether it
+becomes a default-on or opt-in pipeline stage (opt-in unless there's a
+specific reason the default output contract should change -- see ADR 0002
+for why that's the default answer), and what the module still does NOT
+demonstrate even once integrated. Update `docs/extensions.md` to reflect
+what moved and add regression tests to `tests/test_pipeline.py` for the
+module's core claims, not just that it runs without crashing.
+
 ## Style
 
 Standard library first; the project is intentionally "zero-budget" in

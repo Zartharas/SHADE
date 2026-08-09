@@ -25,10 +25,11 @@ jobs:
           path: experiments/output/dlp_benchmark_report.json
       - name: Run full pipeline end-to-end
         run: python3 shade/run_pipeline.py --n 500
-      - name: Smoke-test optional extensions/experiments (not part of the core pipeline; see docs/extensions.md -- this only checks they run without error, not correctness)
+      - name: Run full pipeline with the opt-in policy-review stage (see ADR 0002)
+        run: python3 shade/run_pipeline.py --n 200 --propose_policy_review
+      - name: Smoke-test remaining standalone extensions/experiments (not part of the core pipeline; see docs/extensions.md -- this only checks they run without error, not correctness)
         run: |
           python3 experiments/benchmark_dataset_generator.py --n 200
-          python3 extensions/llm_policy_proposer.py --context "CI smoke test"
           python3 extensions/mcp_tool_call_monitor.py --n 200
           python3 extensions/dp_aggregate_reporting.py --n 200
 
