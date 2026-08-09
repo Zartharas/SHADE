@@ -32,6 +32,7 @@ import shade.eval_harness as eval_harness
 import shade.policy_proposer as policy_proposer
 import shade.mcp_tool_call_monitor as mcp_monitor
 import shade.dp_aggregate_reporting as dp_reporting
+from shade.provenance import get_provenance
 
 
 def test_decision_matrix_covers_every_cell():
@@ -159,6 +160,42 @@ def test_dlp_bootstrap_f1_ci_degenerates_but_wilson_plugin_does_not():
         f"the entire reason this second interval exists."
     )
     assert plugin_upper == 1.0
+
+
+def test_provenance_capture_is_well_formed():
+    # get_provenance() must never raise (it degrades to None fields
+    # instead -- see shade/provenance.py's docstring) and must return the
+    # documented shape. Doesn't assert git_dirty is False, since running
+    # this suite itself against an uncommitted change is a normal and
+    # expected state, not a failure.
+    prov = get_provenance()
+    expected_keys = {
+        "git_commit_full", "git_commit_short", "git_dirty",
+        "python_version", "package_versions", "generated_at_utc",
+    }
+    assert set(prov.keys()) == expected_keys
+    assert isinstance(prov["python_version"], str) and len(prov["python_version"]) > 0
+    assert isinstance(prov["package_versions"], dict)
+    for pkg in ["faker", "pandas", "numpy", "matplotlib", "pyyaml"]:
+        assert pkg in prov["package_versions"]
+    assert isinstance(prov["generated_at_utc"], str) and "T" in prov["generated_at_utc"]
+
+
+def test_eval_harness_reports_embed_provenance():
+    # Both eval_harness.py report-generating entry points (run() for the
+    # easy tier, run_hard_tier() for the hard tier -- NOT the lower-level
+    # score()/score_hard_tier() functions, which are pure scoring with no
+    # provenance concern) must embed provenance and a reproduction
+    # command -- see docs/reproducibility_manifest.md, which documents
+    # this as the mechanism tying a reported number back to the exact
+    # code state that produced it.
+    easy_report = eval_harness.run(n=50, seed=42, out_path=None)
+    assert "provenance" in easy_report and "reproduction_command" in easy_report
+    assert easy_report["provenance"]["python_version"]
+
+    hard_report = eval_harness.run_hard_tier(out_path=None)
+    assert "provenance" in hard_report and "reproduction_command" in hard_report
+    assert hard_report["provenance"]["python_version"]
 
 
 def test_dlp_hard_tier_is_diagnostic_and_genuinely_harder():

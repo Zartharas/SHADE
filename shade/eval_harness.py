@@ -53,6 +53,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from shade.dlp_redact import redact_text
+from shade.provenance import get_provenance
 
 # ---------------------------------------------------------------------------
 # Statistical uncertainty: Wilson score interval for a directly-observed
@@ -599,6 +600,8 @@ def run(n=300, seed=42, out_path=None, n_bootstrap=1000):
     # reproduce a report byte-for-byte, rather than needing a second
     # seed parameter threaded through every caller.
     report = score(samples, ci_seed=seed, n_bootstrap=n_bootstrap)
+    report["provenance"] = get_provenance()
+    report["reproduction_command"] = f"python3 shade/eval_harness.py --n {n} --seed {seed} --n_bootstrap {n_bootstrap}"
     if out_path:
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
         with open(out_path, "w") as f:
@@ -609,6 +612,8 @@ def run(n=300, seed=42, out_path=None, n_bootstrap=1000):
 def run_hard_tier(out_path=None):
     samples = build_hard_benchmark_dataset()
     report = score_hard_tier(samples)
+    report["provenance"] = get_provenance()
+    report["reproduction_command"] = "python3 shade/eval_harness.py --tier hard"
     if out_path:
         os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
         with open(out_path, "w") as f:

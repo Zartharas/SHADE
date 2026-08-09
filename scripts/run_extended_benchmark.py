@@ -42,6 +42,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import shade.eval_harness as eval_harness
+from shade.provenance import get_provenance
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -171,6 +172,8 @@ def main():
     overall_ok = all_dlp_perfect and all_extensions_ok and suite_result["ok"]
 
     report = {
+        "provenance": get_provenance(),
+        "reproduction_command": "python3 scripts/run_extended_benchmark.py",
         "dlp_scale_check": scale_results,
         "dlp_multi_seed_check": seed_results,
         "extension_load_check": extension_results,

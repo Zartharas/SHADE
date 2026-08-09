@@ -88,9 +88,9 @@ shade/        the core package: five pipeline phases + orchestrator (run_pipelin
               + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
               + mcp_tool_call_monitor.py (opt-in pipeline stage, see docs/adr/0003)
               + dp_aggregate_reporting.py (opt-in pipeline stage, see docs/adr/0004)
-tests/        test_pipeline.py -- the self-check suite (20 checks)
+tests/        test_pipeline.py -- the self-check suite (22 checks)
 config/       tool registry (known_endpoints.yaml)
-docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
+docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, reproducibility_manifest.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
 extensions/   empty as of ADR 0004 (all three original prototypes graduated into shade/); starting point for future standalone additions, see docs/extensions.md
 scripts/      run_extended_benchmark.py -- opt-in, slower scale/multi-seed check, see "Reproducing at scale" below
@@ -119,6 +119,10 @@ standalone by design, not part of the `shade` package).
   DART and Silic et al. (2025), distinguishing Shadow AI from the older
   Shadow IT category this project's discovery/inventory approach descends
   from.
+- `docs/reproducibility_manifest.md` maps every quantitative result this
+  repository produces to its exact reproduction command, seed, and output
+  file, plus the environment-provenance (git commit, package versions)
+  automatically embedded in benchmark/diagnostic reports.
 - `docs/adr/` records the reasoning behind non-obvious design decisions,
   starting with why the governance matrix is verified by exhaustive
   enumeration rather than a SAT/SMT solver.

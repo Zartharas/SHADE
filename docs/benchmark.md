@@ -1,7 +1,11 @@
 # Benchmark scope and results
 
 This document states plainly what `shade/eval_harness.py` and `shade/verify_policy.py`
-measure and, more importantly, what they do not.
+measure and, more importantly, what they do not. See
+`docs/reproducibility_manifest.md` for a single table mapping every
+number reported here to its exact reproduction command and the
+environment provenance (git commit, package versions) embedded in each
+generated report.
 
 ## What is measured
 
