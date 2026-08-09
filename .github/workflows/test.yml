@@ -29,10 +29,10 @@ jobs:
         run: python3 shade/run_pipeline.py --n 200 --propose_policy_review
       - name: Run full pipeline with the opt-in MCP monitoring stage (see ADR 0003)
         run: python3 shade/run_pipeline.py --n 200 --include_mcp_monitoring
-      - name: Smoke-test remaining standalone extensions/experiments (not part of the core pipeline; see docs/extensions.md -- this only checks they run without error, not correctness)
-        run: |
-          python3 experiments/benchmark_dataset_generator.py --n 200
-          python3 extensions/dp_aggregate_reporting.py --n 200
+      - name: Run full pipeline with the opt-in DP aggregate reporting stage (see ADR 0004)
+        run: python3 shade/run_pipeline.py --n 200 --privatize_governance_report
+      - name: Smoke-test experiments/ scaffolding (not part of the core pipeline; see docs/extensions.md -- this only checks it runs without error, not correctness; extensions/ is empty as of ADR 0004, all three original modules have graduated into shade/)
+        run: python3 experiments/benchmark_dataset_generator.py --n 200
 
   docker:
     runs-on: ubuntu-latest

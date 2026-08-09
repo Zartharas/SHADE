@@ -21,6 +21,7 @@ import shade.verify_policy as verify_policy
 import shade.eval_harness as eval_harness
 import shade.policy_proposer as policy_proposer
 import shade.mcp_tool_call_monitor as mcp_monitor
+import shade.dp_aggregate_reporting as dp_reporting
 
 
 def test_decision_matrix_covers_every_cell():
@@ -194,6 +195,63 @@ def test_mcp_synthetic_tool_calls_are_well_formed():
     report = mcp_monitor.summarize(rows)
     assert report["total_calls"] == 50
     assert sum(report["by_governance_action"].values()) == 50
+
+
+def test_dp_laplace_mechanism_produces_valid_counts():
+    # shade/dp_aggregate_reporting.py's privatize_counts() must always
+    # return non-negative integer counts, regardless of noise direction --
+    # see docs/adr/0004-integrating-dp-aggregate-reporting.md.
+    import random
+    true_counts = {"ALLOW": 100, "BLOCK": 3, "REDACT_THEN_ALLOW": 20}
+    rng = random.Random(7)
+    noisy = dp_reporting.privatize_counts(true_counts, epsilon=1.0, rng=rng)
+    assert set(noisy.keys()) == set(true_counts.keys())
+    for v in noisy.values():
+        assert isinstance(v, int) and v >= 0, f"noisy count {v} is not a non-negative int"
+
+
+def test_dp_mean_absolute_error_matches_hand_computation():
+    true_counts = {"A": 10, "B": 20, "C": 30}
+    noisy_counts = {"A": 12, "B": 18, "C": 30}
+    # |10-12| + |20-18| + |30-30| = 2 + 2 + 0 = 4; MAE = 4 / 3
+    expected = 4 / 3
+    got = dp_reporting.mean_absolute_error(true_counts, noisy_counts)
+    assert abs(got - expected) < 1e-9, f"MAE {got} != expected {expected}"
+
+
+def test_dp_epsilon_sweep_mae_trends_downward():
+    # Formalizes the privacy/utility trade-off docs/extensions.md describes
+    # qualitatively: as epsilon increases (less noise), MAE should trend
+    # downward on average across a fixed synthetic event set. Uses a fixed
+    # seed and a large-ish n to keep this a reliable, non-flaky check of a
+    # statistical trend, not a per-value guarantee.
+    from shade.generate_synthetic_data import generate as generate_events
+    from shade.governance_score import score_events
+    rows = generate_events(500, "config/known_endpoints.yaml", seed=42)
+    score_events(rows)
+    sweep = dp_reporting.run_epsilon_sweep(rows, [0.1, 1.0, 10.0], seed=42)
+    maes = [r["action_distribution_mae"] for r in sweep]
+    assert maes[0] >= maes[-1], (
+        f"expected MAE at epsilon=0.1 ({maes[0]}) to be >= MAE at epsilon=10.0 "
+        f"({maes[-1]}) -- more privacy (lower epsilon) should mean more noise"
+    )
+
+
+def test_dp_pipeline_stage_privatizes_this_runs_own_events():
+    # The load-bearing integration claim from ADR 0004: the pipeline stage
+    # chains to the SAME already-scored events a run produced, not a
+    # freshly regenerated population. Simulates what shade/run_pipeline.py
+    # does: generate+score once, privatize that exact list, and confirm
+    # the "true" counts in the DP report match that list's real action
+    # distribution exactly (only the "dp_released" side has noise).
+    from collections import Counter
+    from shade.generate_synthetic_data import generate as generate_events
+    from shade.governance_score import score_events
+    rows = generate_events(200, "config/known_endpoints.yaml", seed=123)
+    score_events(rows)
+    expected_true = dict(Counter(r["governance_action"] for r in rows))
+    report = dp_reporting.privatize_report(rows, epsilon=1.0, seed=123)
+    assert report["action_distribution"]["true"] == expected_true
 
 
 def test_dlp_leaves_clean_text_untouched():

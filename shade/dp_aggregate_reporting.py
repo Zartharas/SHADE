@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-extensions/dp_aggregate_reporting.py
+shade/dp_aggregate_reporting.py
 
 Scoped privacy-preserving prototype: applies (epsilon)-differential
 privacy to SHADE's AGGREGATE reporting outputs (governance action
@@ -55,8 +55,16 @@ LIMITATIONS, STATED RATHER THAN IGNORED:
   in this demo -- the point is to prototype and measure the mechanism's
   utility cost, not to claim an actual deployment's data is protected.
 
-Usage:
-    python extensions/dp_aggregate_reporting.py --n 2000 --epsilons 0.1,0.5,1.0,5.0
+Usage (standalone, generates its own synthetic run):
+    python shade/dp_aggregate_reporting.py --n 2000 --epsilons 0.1,0.5,1.0,5.0
+
+Graduated into shade/ per docs/adr/0004-integrating-dp-aggregate-reporting.md.
+See that ADR for how shade/run_pipeline.py's opt-in
+--privatize_governance_report flag calls privatize_report() directly on
+the SAME already-scored events that pipeline run produced -- a tighter
+integration than this module's own standalone main() (below), which
+generates a fresh, separate synthetic run to privatize when invoked on
+its own.
 """
 import argparse
 import json
@@ -153,7 +161,7 @@ def main():
     ap.add_argument("--n", type=int, default=2000)
     ap.add_argument("--epsilons", type=str, default="0.1,0.5,1.0,5.0", help="Comma-separated epsilon values to evaluate.")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--out", type=str, default="experiments/output/dp_report.json")
+    ap.add_argument("--out", type=str, default="output/dp_report.json")
     args = ap.parse_args()
 
     epsilons = [float(x) for x in args.epsilons.split(",")]

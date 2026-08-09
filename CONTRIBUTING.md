@@ -71,7 +71,11 @@ from silently implying more than it proves as it grows.
 `extensions/` holds optional, standalone prototypes -- not part of the
 core pipeline, not covered by `tests/test_pipeline.py`, and each explicitly
 scoped in `docs/extensions.md` (what it demonstrates and what it doesn't).
-If you touch one:
+As of ADR 0004, the three originally-scoped extensions (LLM policy
+proposer, MCP tool-call monitor, DP aggregate reporting) have all
+graduated into `shade/`, so `extensions/` is currently empty -- this
+section describes the standard for any NEW standalone prototype added
+here in the future. If you add one:
 
 - Keep it standalone. Don't add imports from `extensions/` into
   `shade/run_pipeline.py`, `tests/test_pipeline.py`, or any core-pipeline module --
@@ -92,11 +96,14 @@ If you touch one:
 
 Extensions move from `extensions/` into `shade/` one at a time, each with
 its own ADR (see `docs/adr/0002-integrating-llm-policy-proposer.md` for the
-first one and the template it sets, and
-`docs/adr/0003-integrating-mcp-tool-call-monitor.md` for a case where the
-integration shape had to differ -- a parallel pipeline phase instead of a
-chained one -- because the module's data had no real relationship to
-existing pipeline output). A graduation ADR should cover: what
+first one and the template it sets; `docs/adr/0003-integrating-mcp-tool-call-monitor.md`
+for a case where the integration shape had to differ -- a parallel
+pipeline phase instead of a chained one -- because the module's data had
+no real relationship to existing pipeline output; and
+`docs/adr/0004-integrating-dp-aggregate-reporting.md` for a case where
+"chained" itself had two possible meanings -- reusing this run's own
+already-computed data vs. regenerating a fresh sample to process -- and
+the ADR had to pick and justify one). A graduation ADR should cover: what
 moves and why, what safety property must be preserved (e.g. "never
 auto-applies to DECISION_MATRIX" for the policy proposer), whether it
 becomes a default-on or opt-in pipeline stage (opt-in unless there's a

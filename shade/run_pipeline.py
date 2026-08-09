@@ -27,6 +27,7 @@ import shade.governance_score as gov
 import shade.build_dashboard as dash
 import shade.policy_proposer as policy_proposer
 import shade.mcp_tool_call_monitor as mcp_monitor
+import shade.dp_aggregate_reporting as dp_reporting
 
 
 def write_csv(rows, path):
@@ -58,6 +59,19 @@ def main():
                           "output/mcp_tool_calls_summary.json. Does not change any other "
                           "output file when omitted (default pipeline behavior is "
                           "unchanged).")
+    ap.add_argument("--privatize_governance_report", action="store_true", default=False,
+                     help="Opt-in (default off): after governance scoring, apply the "
+                          "Laplace mechanism (shade/dp_aggregate_reporting.py) to THIS "
+                          "run's own already-scored events (chained to the in-memory "
+                          "events list, not a freshly regenerated population -- see "
+                          "docs/adr/0004-integrating-dp-aggregate-reporting.md) and write "
+                          "output/dp_report.json. Does not change any other output file "
+                          "when omitted (default pipeline behavior is unchanged).")
+    ap.add_argument("--dp_epsilon", type=float, default=1.0,
+                     help="Epsilon for --privatize_governance_report (lower = more "
+                          "privacy, more noise). Only used if that flag is passed. The "
+                          "multi-epsilon sweep remains a shade/dp_aggregate_reporting.py "
+                          "CLI-only capability, not exposed through this flag -- see ADR 0004.")
     args = ap.parse_args()
 
     # Repo root, not this file's own directory (shade/) -- this script now
@@ -123,6 +137,19 @@ def main():
         with open("output/mcp_tool_calls_summary.json", "w") as f:
             json.dump(mcp_report, f, indent=2)
         print(f"[optional] MCP tool-call monitoring: {mcp_report['total_calls']} synthetic calls -> output/mcp_tool_calls.csv")
+
+    # Optional stage (opt-in only, see --privatize_governance_report above):
+    # chained downstream like --propose_policy_review, but chained to the
+    # SAME already-scored `events` list Phase 4 just produced (not a fresh
+    # regenerated population) -- see
+    # docs/adr/0004-integrating-dp-aggregate-reporting.md for why that
+    # distinction matters here.
+    if args.privatize_governance_report:
+        dp_report = dp_reporting.privatize_report(events, epsilon=args.dp_epsilon)
+        with open("output/dp_report.json", "w") as f:
+            json.dump(dp_report, f, indent=2)
+        print(f"[optional] DP aggregate report (epsilon={args.dp_epsilon}): "
+              f"action_dist MAE={dp_report['action_distribution']['mean_absolute_error']} -> output/dp_report.json")
 
     # Phase 6: internal-checks report (filename retained as VALIDATION_REPORT.md
     # for output-contract stability; title/body describe internal checks and

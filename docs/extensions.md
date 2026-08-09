@@ -7,28 +7,28 @@ overridden by request; all three were implemented as solo-researcher-
 scoped prototypes, not as finished, defensible research contributions in
 their own right.
 
-**Update:** the LLM policy proposer and the MCP tool-call monitor have
-since graduated out of this document. The proposer is now
-`shade/policy_proposer.py` (see
-`docs/adr/0002-integrating-llm-policy-proposer.md`); the MCP monitor is
-now `shade/mcp_tool_call_monitor.py` (see
-`docs/adr/0003-integrating-mcp-tool-call-monitor.md`). Both are tested by
-`tests/test_pipeline.py` and wired into `shade/run_pipeline.py` as
-opt-in stages -- the proposer chains downstream of a run's own governance
-results, while the MCP monitor runs as an independent parallel phase,
-since its synthetic tool-call stream has no real relationship to the core
-pipeline's chat-tool events (see ADR 0003 for why). DP aggregate reporting
-remains a standalone extension, described below, and this document is
-still the honest accounting of what it does and doesn't demonstrate. Per
-the maintainer's stated plan (integrate one at a time, test, then move to
-the next), DP reporting is the last of the three and is a candidate for
-the same treatment later, with its own ADR (0004) when/if that happens.
+**Update:** all three extensions have now graduated out of this document
+and into `shade/`, each with its own ADR: the LLM policy proposer is
+`shade/policy_proposer.py` (`docs/adr/0002-integrating-llm-policy-proposer.md`),
+the MCP tool-call monitor is `shade/mcp_tool_call_monitor.py`
+(`docs/adr/0003-integrating-mcp-tool-call-monitor.md`), and DP aggregate
+reporting is `shade/dp_aggregate_reporting.py`
+(`docs/adr/0004-integrating-dp-aggregate-reporting.md`). All three are
+tested by `tests/test_pipeline.py` and wired into `shade/run_pipeline.py`
+as opt-in stages, each integrated differently based on what its data
+actually relates to: the proposer and DP reporting both chain downstream
+of a run's own governance results (the proposer uses the action
+distribution as review context; DP reporting privatizes the exact
+already-scored `events` list in memory, not a freshly regenerated one --
+see ADR 0004 for why that distinction mattered), while the MCP monitor
+runs as an independent parallel phase, since its synthetic tool-call
+stream has no real relationship to the core pipeline's chat-tool events
+(see ADR 0003 for why).
 
-The remaining one lives in `extensions/`, is standalone (importable and
-runnable independently), and is **not wired into `shade/run_pipeline.py`
-or `tests/test_pipeline.py`** -- it doesn't change the core pipeline's
-documented behavior, and none of its claims should be read as claims
-about the core SHADE pipeline itself.
+`extensions/` is now empty of the three originally-scoped modules. This
+document remains as the historical, honest accounting of what each module
+demonstrated standalone and what integration did and didn't change about
+those claims -- see the "Graduated" sections below.
 
 ```mermaid
 flowchart TB
@@ -38,14 +38,12 @@ flowchart TB
         GEN[shade/generate_synthetic_data.py]
         PP[shade/policy_proposer.py<br/>propose -> verify -> human review<br/>opt-in pipeline stage, chained]
         MCP[shade/mcp_tool_call_monitor.py<br/>agent tool-call telemetry<br/>opt-in pipeline stage, parallel]
-    end
-    subgraph ext["extensions/ (standalone, CI-smoke-tested only)"]
-        DP[dp_aggregate_reporting.py<br/>Laplace mechanism on aggregates]
+        DP[shade/dp_aggregate_reporting.py<br/>Laplace mechanism on aggregates<br/>opt-in pipeline stage, chained to in-memory events]
     end
     PP --> VP
     MCP --> VP
     MCP -.reuses.-> DR
-    DP -.privatizes output of.-> GS
+    DP -.privatizes this run's own.-> GS
     GEN -.reused by.-> DP
 ```
 
@@ -112,7 +110,7 @@ Integration changed where the module lives, how tested it is, and whether
 the pipeline can invoke it -- it does not change any of these scope
 limits.
 
-## 1. Privacy-preserving detection prototype (`extensions/dp_aggregate_reporting.py`)
+## Graduated: privacy-preserving detection prototype (now `shade/dp_aggregate_reporting.py`)
 
 Applies the Laplace mechanism (epsilon-differential privacy for count
 queries) to SHADE's **aggregate reporting** outputs (governance action
@@ -125,27 +123,46 @@ there for DP to protect; aggregate count release, where small-group counts
 can leak individual-level information, is where the mechanism actually has
 something to do.
 
-**What this demonstrates:** a working, correctly-implemented Laplace
-mechanism with a measured privacy/utility trade-off (mean absolute error
-across four epsilon values on 2000 synthetic events, monotonically
-decreasing as epsilon increases, as the mechanism's theory predicts).
+**What integration added:** an opt-in `--privatize_governance_report`
+flag on `shade/run_pipeline.py` that calls `privatize_report()` directly
+on the SAME already-scored `events` list that run's governance phase just
+produced -- a tighter integration than the module's own standalone CLI,
+which generates a fresh, separate synthetic run to privatize when invoked
+on its own (see `docs/adr/0004-integrating-dp-aggregate-reporting.md` for
+why that distinction mattered enough to change). A new `--dp_epsilon`
+flag (default `1.0`) controls the pipeline stage's single report; the
+multi-epsilon sweep remains a module-CLI-only capability. Four tests in
+`tests/test_pipeline.py`: valid non-negative noisy counts, a hand-checked
+MAE calculation, MAE trending downward as epsilon increases across a
+fixed sweep, and confirmation that the pipeline stage privatizes the
+exact run it claims to (its "true" counts match that run's real action
+distribution exactly).
 
-**What this does NOT demonstrate:** privacy budget composition across
-multiple releases (each run spends a fresh epsilon as if it were the only
-query ever made -- a real deployment publishing several differently-sliced
-aggregates would need cumulative budget accounting this prototype doesn't
+**What this still does NOT demonstrate, even integrated:** privacy budget
+composition across multiple releases (each run, pipeline-integrated or
+standalone, spends a fresh epsilon as if it were the only query ever made
+-- a real deployment publishing several differently-sliced aggregates
+would need cumulative budget accounting this prototype doesn't
 implement), any DP-SGD training mechanism, or federated learning (the
 scoping conversation's other listed option, not attempted -- picking both
-would have re-violated the "one, properly scoped" principle a second time).
+would have re-violated the "one, properly scoped" principle a second
+time). Integration changed where the module lives, how tested it is, and
+how tightly it's chained to a real run's own data -- it does not add
+budget composition or change what the mechanism itself protects.
 
 ## Common thread
 
-Every module here (graduated or still standalone) reuses rather than
-reimplements core-pipeline logic where possible (shade/dlp_redact.py's
-patterns, the exhaustive-enumeration verification method from ADR 0001,
-shade/generate_synthetic_data.py's event generator) and is explicit about
-what it does not claim. Graduating a module changes where it lives and how
-rigorously it's tested; it does not, by itself, change what it's actually
-been shown to do -- that still has to be earned separately, as the "what
-integration added" vs. "what it still does NOT demonstrate" split above
-for the policy proposer is meant to make clear.
+Every module here reuses rather than reimplements core-pipeline logic
+where possible (shade/dlp_redact.py's patterns, the exhaustive-enumeration
+verification method from ADR 0001, shade/generate_synthetic_data.py's
+event generator) and is explicit about what it does not claim. Graduating
+a module changes where it lives, how rigorously it's tested, and how
+tightly it's wired to a real pipeline run; it does not, by itself, change
+what it's actually been shown to do -- that still has to be earned
+separately, as each "what integration added" vs. "what it still does NOT
+demonstrate" split above is meant to make clear. With all three
+extensions now graduated, `docs/adr/0002` through `0004` together form a
+complete record of that reasoning, applied three times to three
+genuinely different integration shapes (chained-to-fresh-context,
+independent-parallel, and chained-to-in-memory-run) rather than one
+pattern copy-pasted three times.

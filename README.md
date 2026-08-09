@@ -64,6 +64,7 @@ storage, maintenance, and development time still carry real operational cost.
 | `shade/build_dashboard.py` | Static local visualization; not a substitute for ELK / OpenSearch | 6, 8.5 |
 | `shade/policy_proposer.py` | Mock-backend policy-change proposer, gated by formal verification, opt-in pipeline stage; not a stand-in for an evaluated LLM-based governance tool -- see docs/extensions.md | new, see docs/adr/0002 |
 | `shade/mcp_tool_call_monitor.py` | Synthetic agent tool-call (MCP) telemetry and a second, independently-verified governance table; not a stand-in for real MCP server instrumentation -- see docs/extensions.md | new, see docs/adr/0003 |
+| `shade/dp_aggregate_reporting.py` | Laplace-mechanism differential privacy on aggregate reporting outputs; no privacy budget composition across releases -- see docs/extensions.md | new, see docs/adr/0004 |
 
 ## Layout
 
@@ -72,7 +73,8 @@ shade/        the core package: five pipeline phases + orchestrator (run_pipelin
               + verification (verify_policy.py) + eval harness (eval_harness.py)
               + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
               + mcp_tool_call_monitor.py (opt-in pipeline stage, see docs/adr/0003)
-tests/        test_pipeline.py -- the self-check suite (12 checks)
+              + dp_aggregate_reporting.py (opt-in pipeline stage, see docs/adr/0004)
+tests/        test_pipeline.py -- the self-check suite (16 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
@@ -141,10 +143,12 @@ orchestrator.
 Run the self-check (formally verifies the governance decision matrix,
 checks DLP redaction patterns, runs the DLP evaluation harness against its
 precision/recall/F1 thresholds, exercises the policy proposer's
-verify/guardrail behavior, and exercises the MCP tool-call monitor's
-second governance table and generator -- see docs/benchmark.md,
-docs/adr/0002-integrating-llm-policy-proposer.md, and
-docs/adr/0003-integrating-mcp-tool-call-monitor.md) with:
+verify/guardrail behavior, exercises the MCP tool-call monitor's second
+governance table and generator, and exercises the DP aggregate reporter's
+Laplace mechanism and privacy/utility trade-off -- see docs/benchmark.md,
+docs/adr/0002-integrating-llm-policy-proposer.md,
+docs/adr/0003-integrating-mcp-tool-call-monitor.md, and
+docs/adr/0004-integrating-dp-aggregate-reporting.md) with:
 
 ```bash
 python3 tests/test_pipeline.py
