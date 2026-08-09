@@ -21,6 +21,41 @@ are all 1.0, with zero false positives or false negatives across all four
 pattern types (see `experiments/output/dlp_benchmark_report.json` after
 running `python3 shade/eval_harness.py`).
 
+**How much should a perfect score be trusted?** A point estimate alone
+doesn't say -- 0 errors in 10 samples and 0 errors in 10,000 samples are
+very different claims, and a bare "F1 = 1.0" doesn't distinguish them.
+`shade/eval_harness.py` now reports a 95% Wilson score interval for
+precision and recall (the standard interval for a binomial proportion,
+chosen specifically because it stays well-behaved at the 0%/100%
+boundary these benchmarks tend to land on) alongside every point
+estimate. At n=300, seed=42, the micro-averaged precision/recall interval
+is **[0.978, 1.0]** -- meaning the data are consistent with a true error
+rate as high as roughly 2.2%, not just with "zero, forever." At n=5,000
+(see the Scale check below), that interval tightens to **[0.999, 1.0]**.
+This is the honest way to read every "F1 = 1.0" in this document: as a
+point estimate with a stated, sample-size-dependent margin, not as a
+claim of provably-zero error.
+
+F1 itself is a nonlinear function of precision and recall with no simple
+closed-form interval, so it's estimated by nonparametric bootstrap
+(resampling the scored items with replacement, 1,000 resamples, fixed
+seed). This has a real limitation worth stating rather than hiding: when
+the observed sample has zero errors, every bootstrap resample is also
+error-free, so the bootstrap interval **degenerates to exactly [1.0,
+1.0]** -- which looks like perfect certainty but is actually an artifact
+of resampling from an error-free sample, not evidence that the true rate
+is exactly 1.0. `shade/eval_harness.py` reports a second interval,
+`f1_ci_95_wilson_plugin` (F1's formula evaluated at the Wilson bounds of
+precision and recall), specifically to give a non-degenerate answer in
+this case -- conservative, since it ignores the correlation between
+precision's and recall's estimation errors, but genuinely informative
+where the bootstrap interval isn't. See `shade/eval_harness.py`'s
+docstring and `tests/test_pipeline.py`'s
+`test_dlp_bootstrap_f1_ci_degenerates_but_wilson_plugin_does_not` for the
+full reasoning -- that test exists specifically so this behavior stays
+documented and intentional rather than silently "fixed" (i.e. hidden) by
+a future change.
+
 **Multi-seed check.** Since a single seed could in principle be a lucky
 draw rather than a representative one, the same benchmark was regenerated
 and rescored at five different seeds (42, 1, 7, 99, 12345; 300 samples
@@ -86,6 +121,12 @@ python3 shade/verify_policy.py
 python3 tests/test_pipeline.py   # runs both as part of CI-equivalent checks, with threshold assertions
 ```
 
+The command above includes confidence intervals by default
+(`--n_bootstrap 1000`); increase or decrease that flag to trade off
+bootstrap runtime against how finely the F1 interval's percentiles are
+estimated -- it has no effect on the Wilson intervals, which are a closed
+form, not a resampling estimate.
+
 `experiments/dlp_benchmark_config.json` records the parameters (n, seed,
 F1 thresholds) used in CI so a future contributor can see at a glance what
 "passing" means without reading the harness source.
@@ -97,11 +138,18 @@ As a separate, one-off check (not part of CI, since it's slower and adds
 nothing CI's smaller run doesn't already establish about *correctness* --
 only about *scale*), the same benchmark was re-run at higher volumes:
 
-| n | seed | precision | recall | f1 | fp | fn |
-|---|---|---|---|---|---|---|
-| 300 (CI default) | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
-| 2,000 | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
-| 10,000 | 42 | 1.0 | 1.0 | 1.0 | 0 | 0 |
+| n | seed | precision | recall | f1 | 95% CI (precision/recall) | fp | fn |
+|---|---|---|---|---|---|---|---|
+| 300 (CI default) | 42 | 1.0 | 1.0 | 1.0 | [0.978, 1.0] | 0 | 0 |
+| 2,000 | 42 | 1.0 | 1.0 | 1.0 | [0.997, 1.0] | 0 | 0 |
+| 10,000 | 42 | 1.0 | 1.0 | 1.0 | [0.999, 1.0] | 0 | 0 |
+
+The interval tightens monotonically as n grows -- exactly what Wilson's
+interval should do for a fixed (perfect) observed result, and a useful
+sanity check that the interval computation itself isn't just returning a
+fixed width. See `tests/test_pipeline.py`'s
+`test_dlp_confidence_intervals_tighten_with_more_samples` for the
+regression test encoding this.
 
 The multi-seed check was also extended to two more seeds (2026, 555) at
 n=1,000 each, beyond the five seeds already documented above at n=300:

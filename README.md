@@ -88,7 +88,7 @@ shade/        the core package: five pipeline phases + orchestrator (run_pipelin
               + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
               + mcp_tool_call_monitor.py (opt-in pipeline stage, see docs/adr/0003)
               + dp_aggregate_reporting.py (opt-in pipeline stage, see docs/adr/0004)
-tests/        test_pipeline.py -- the self-check suite (16 checks)
+tests/        test_pipeline.py -- the self-check suite (19 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
@@ -157,11 +157,12 @@ of the discovery/DLP/governance/dashboard logic, shared by the CLI and the
 orchestrator.
 
 Run the self-check (formally verifies the governance decision matrix,
-checks DLP redaction patterns, runs the DLP evaluation harness against its
-precision/recall/F1 thresholds, exercises the policy proposer's
-verify/guardrail behavior, exercises the MCP tool-call monitor's second
-governance table and generator, and exercises the DP aggregate reporter's
-Laplace mechanism and privacy/utility trade-off -- see docs/benchmark.md,
+checks DLP redaction patterns and their statistical confidence intervals,
+runs the DLP evaluation harness against its precision/recall/F1
+thresholds, exercises the policy proposer's verify/guardrail behavior,
+exercises the MCP tool-call monitor's second governance table and
+generator, and exercises the DP aggregate reporter's Laplace mechanism
+and privacy/utility trade-off -- see docs/benchmark.md,
 docs/adr/0002-integrating-llm-policy-proposer.md,
 docs/adr/0003-integrating-mcp-tool-call-monitor.md, and
 docs/adr/0004-integrating-dp-aggregate-reporting.md) with:

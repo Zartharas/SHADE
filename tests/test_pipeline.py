@@ -110,6 +110,74 @@ def test_dlp_evaluation_harness_meets_threshold():
         )
 
 
+def test_dlp_benchmark_confidence_intervals_are_well_formed():
+    # Every reported point estimate must sit strictly inside its own
+    # confidence interval (or the interval must be [None, None] when the
+    # denominator was zero) -- a basic sanity check that wilson_ci() and
+    # the report-assembly code in score() didn't get the bounds backwards
+    # or drop a value.
+    report = eval_harness.run(n=300, seed=42, out_path=None)
+    all_metric_blocks = [report["micro_avg"]] + list(report["per_pattern"].values())
+    for block in all_metric_blocks:
+        for metric_name, ci_name in [("precision", "precision_ci_95"), ("recall", "recall_ci_95")]:
+            point, ci = block[metric_name], block[ci_name]
+            lower, upper = ci
+            if point is None:
+                assert lower is None and upper is None
+            else:
+                assert lower is not None and upper is not None
+                assert lower <= point <= upper, f"{metric_name} point estimate {point} outside its own CI {ci}"
+                assert 0.0 <= lower <= upper <= 1.0, f"{metric_name} CI {ci} outside the valid [0,1] range"
+
+
+def test_dlp_bootstrap_f1_ci_degenerates_but_wilson_plugin_does_not():
+    # Documents a real, easy-to-miss property of nonparametric bootstrap
+    # confidence intervals rather than letting it surface silently: when
+    # the observed sample has zero classification errors (the case this
+    # benchmark's F1=1.0 usually lands in), EVERY bootstrap resample of
+    # that sample is also error-free, so the bootstrap distribution has
+    # zero variance and the resulting interval collapses to [1.0, 1.0] --
+    # which looks like perfect certainty but is actually an artifact of
+    # the method, not evidence of it. f1_ci_95_wilson_plugin exists
+    # specifically to give a genuine, non-degenerate interval in exactly
+    # this case (see f1_wilson_plugin_ci()'s docstring). This test fails
+    # loudly if a future change accidentally "fixes" (i.e. hides) the
+    # degenerate bootstrap behavior without anyone noticing, or if the
+    # Wilson plug-in interval stops being wider than the degenerate one.
+    report = eval_harness.run(n=300, seed=42, out_path=None)
+    m = report["micro_avg"]
+    assert m["f1"] == 1.0, "this test assumes the benchmark still scores a perfect F1 at n=300, seed=42"
+    assert m["f1_ci_95"] == [1.0, 1.0], (
+        "expected the nonparametric bootstrap to degenerate to [1.0, 1.0] "
+        "on an error-free sample -- if this changed, re-check "
+        "bootstrap_f1_ci()'s resampling logic."
+    )
+    plugin_lower, plugin_upper = m["f1_ci_95_wilson_plugin"]
+    assert plugin_lower < 1.0, (
+        f"expected the Wilson plug-in F1 interval's lower bound ({plugin_lower}) "
+        f"to be strictly below 1.0 even at a perfect observed score -- that's "
+        f"the entire reason this second interval exists."
+    )
+    assert plugin_upper == 1.0
+
+
+def test_dlp_confidence_intervals_tighten_with_more_samples():
+    # A basic, honest sanity check that the CIs actually respond to sample
+    # size the way statistical theory says they must: more evidence should
+    # never produce a WIDER interval for the same underlying (perfect)
+    # result. Uses the same seed at two scales so the only thing that
+    # differs is n.
+    small = eval_harness.run(n=300, seed=42, out_path=None)
+    large = eval_harness.run(n=3000, seed=42, out_path=None)
+    small_lower = small["micro_avg"]["precision_ci_95"][0]
+    large_lower = large["micro_avg"]["precision_ci_95"][0]
+    assert large_lower > small_lower, (
+        f"expected the n=3000 lower CI bound ({large_lower}) to be tighter "
+        f"(higher, since both scored perfectly) than the n=300 bound "
+        f"({small_lower}) -- more samples should narrow the interval."
+    )
+
+
 def test_policy_proposer_default_domain_passes_verification():
     # shade/policy_proposer.py's HeuristicMockBackend, run over the existing
     # (unchanged) 3x3 domain, must produce a proposal that passes formal
