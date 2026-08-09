@@ -161,6 +161,45 @@ def test_dlp_bootstrap_f1_ci_degenerates_but_wilson_plugin_does_not():
     assert plugin_upper == 1.0
 
 
+def test_dlp_hard_tier_is_diagnostic_and_genuinely_harder():
+    # Unlike every other test in this suite, this one does NOT assert a
+    # high score -- it asserts the opposite. The hard tier
+    # (eval_harness.build_hard_benchmark_dataset / score_hard_tier) exists
+    # specifically to probe OCR noise, Unicode homoglyphs, obfuscation,
+    # international formats, and fullwidth digits, none of which the
+    # regex-only patterns in shade/dlp_redact.py were designed to catch.
+    # A LOW recall here is the correct, expected, honest result -- see
+    # docs/benchmark.md's "Harder benchmark tier" section. This test
+    # exists to catch the opposite failure mode from usual: if this ever
+    # silently started reporting 1.0, that would mean the tier stopped
+    # being diagnostic (e.g. someone accidentally made it too easy while
+    # editing fragments), which would be a real problem worth knowing
+    # about immediately, not a success to celebrate.
+    samples = eval_harness.build_hard_benchmark_dataset()
+    assert len(samples) > 0, "hard tier dataset must not be empty"
+    report = eval_harness.score_hard_tier(samples)
+    assert report["n_samples"] == len(samples)
+    assert report["overall_recall"] is not None
+    assert 0.0 <= report["overall_recall"] <= 1.0
+    assert report["overall_recall"] < 1.0, (
+        f"hard tier overall recall was {report['overall_recall']} -- expected "
+        f"this to be well below 1.0 (it's designed to be hard); if the "
+        f"patterns in shade/dlp_redact.py genuinely improved enough to catch "
+        f"all of these, that's a real change worth documenting in "
+        f"docs/benchmark.md's 'Harder benchmark tier' section, not silently "
+        f"absorbing here."
+    )
+    # Structural check: every category present in the dataset shows up in
+    # the report with a well-formed recall value.
+    categories_in_data = {s["hard_category"] for s in samples}
+    assert set(report["by_category"].keys()) == categories_in_data
+    for category, cm in report["by_category"].items():
+        assert cm["tp"] + cm["fn"] == cm["n"]
+        if cm["n"] > 0:
+            assert cm["recall"] is not None
+            assert 0.0 <= cm["recall"] <= 1.0
+
+
 def test_dlp_confidence_intervals_tighten_with_more_samples():
     # A basic, honest sanity check that the CIs actually respond to sample
     # size the way statistical theory says they must: more evidence should

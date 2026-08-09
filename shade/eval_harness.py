@@ -246,6 +246,228 @@ def build_benchmark_dataset(n, seed):
     return samples
 
 
+# ---------------------------------------------------------------------------
+# HARD TIER: a second, deliberately harder benchmark, built to actually
+# surface the recall gaps docs/benchmark.md's "scope" section has stated
+# as a limitation since this harness was first written -- OCR-noise-shaped
+# text, Unicode homoglyphs, deliberately obfuscated PII, and non-US
+# formats. This is NOT gated by a pass/fail threshold in
+# tests/test_pipeline.py the way the easy tier is: it is diagnostic, not a
+# regression gate, because failing to catch some of these is the expected,
+# honest, and more informative result -- the point is to measure and
+# report the actual boundary, not to keep raising a bar until it's cleared.
+#
+# Every fragment below is a genuine true positive (it IS PII of the
+# labeled type) by construction; there are no near-miss distractors in
+# this tier (scoped out deliberately -- the easy tier already demonstrates
+# the patterns don't false-positive on lookalikes; this tier's whole point
+# is recall against harder true positives, not precision).
+#
+# Each category's expected outcome was empirically checked against the
+# actual PATTERNS regexes before being included here (not assumed) --
+# some genuinely surprising results came out of that check and are noted
+# inline; see docs/benchmark.md's "Harder benchmark tier" section for the
+# full, measured write-up.
+# ---------------------------------------------------------------------------
+
+# OCR noise: common OCR digit/letter confusions (0<->O, 1<->l/I) applied to
+# otherwise-valid phone/SSN/API-key shapes. Empirically: none of these are
+# detected by the current regexes (the confused character falls outside
+# \d or the exact expected character class).
+OCR_NOISE_TRUE_POSITIVES = {
+    "phone": [
+        "call 555-l23-4567 for support",       # '1' -> 'l'
+        "reach us at 555-123-456O anytime",    # '0' -> 'O'
+    ],
+    "ssn_shaped": [
+        "ssn on file: l23-45-6789",            # '1' -> 'l'
+        "recorded as 456-78-90l2 previously",  # '1' -> 'l'
+    ],
+    "fake_api_key": [
+        # Genuine 'O'->'0' OCR-style substitution. Empirically STILL
+        # detected -- unlike phone/SSN's narrow \d-only patterns, the API
+        # key charclass [A-Za-z0-9_-] already includes both the original
+        # and the OCR-confused character, so this particular noise type
+        # cannot break this particular pattern by construction. Included
+        # deliberately (not dropped) to make that asymmetry visible in the
+        # results rather than only showing categories that fail uniformly.
+        "here is a key sk-fake-AbCdEfGhIjKlMn0pQrStUvWx for testing",
+    ],
+}
+
+# Unicode homoglyphs: a visually-identical non-ASCII character substituted
+# into an email address. Empirically: a homoglyph in the DOMAIN is never
+# detected (the domain char-class run breaks and there's no fallback);
+# a homoglyph in the LOCAL PART is detected only if a punctuation
+# character (a genuine \w/\W boundary) follows it before the rest of
+# the local part -- a homoglyph immediately followed by more letters
+# (no intervening punctuation) is NOT detected. All three variants are
+# included specifically because this nuance is easy to get wrong by
+# assumption rather than measurement.
+HOMOGLYPH_TRUE_POSITIVES = {
+    "email": [
+        "contact me at jane.doe@exаmple.com please",   # Cyrillic 'a' in domain -- NOT detected
+        "contact me at jаne.doe@example.com please",   # Cyrillic 'a' in local part, dot follows -- IS detected (partial match after the punctuation boundary)
+        "contact me at jаne@example.com now",          # Cyrillic 'a' in local part, no punctuation follows -- NOT detected
+    ],
+}
+
+# Deliberately obfuscated PII: spelled-out or heavily spaced, the kind a
+# human reader parses instantly but a fixed-shape regex cannot. Empirically:
+# none of these are detected.
+OBFUSCATED_TRUE_POSITIVES = {
+    "email": [
+        "reach me at jane dot doe at example dot com thanks",
+        "reach me at jane . doe @ example . com thanks",
+    ],
+    "phone": [
+        "call five five five, one two three, four five six seven",
+    ],
+    "ssn_shaped": [
+        "ssn on file: 1 2 3 - 4 5 - 6 7 8 9",
+    ],
+    "fake_api_key": [
+        "here is a key sk-fake-AbCd EfGh IjKl MnOp QrSt UvWx for testing",
+    ],
+}
+
+# International / non-US formats: the existing patterns were authored
+# against US phone shape (\d{3}-\d{3}-\d{4} with optional country code)
+# and US SSN shape (\d{3}-\d{2}-\d{4}) specifically -- see docs/benchmark.md's
+# long-standing scope note. Empirically: none of these are detected.
+INTERNATIONAL_TRUE_POSITIVES = {
+    "phone": [
+        "call +44 20 7946 0958 for support",     # UK
+        "call +91 98765 43210 for support",      # India
+    ],
+    "ssn_shaped": [
+        # UK National Insurance number -- closest real-world equivalent to
+        # a US SSN as a personal government ID; mapped to ssn_shaped ground
+        # truth as a deliberate stretch, documented rather than silent.
+        "national insurance number QQ123456C on file",
+    ],
+}
+
+# Fullwidth Unicode digits: included because it's a genuine POSITIVE
+# surprise, not another gap -- Python's \d in default (Unicode) mode
+# matches Unicode decimal-digit characters, not just ASCII 0-9, so a
+# fullwidth-digit phone/SSN is actually caught. Worth measuring and
+# reporting precisely because assuming "non-ASCII digits must fail" would
+# have been wrong.
+FULLWIDTH_DIGIT_TRUE_POSITIVES = {
+    "phone": [
+        "call \uff15\uff15\uff15-\uff11\uff12\uff13-\uff14\uff15\uff16\uff17 for support",
+    ],
+    "ssn_shaped": [
+        "ssn on file: \uff11\uff12\uff13-\uff14\uff15-\uff16\uff17\uff18\uff19",
+    ],
+}
+
+HARD_TIER_CATEGORIES = {
+    "ocr_noise": OCR_NOISE_TRUE_POSITIVES,
+    "unicode_homoglyph": HOMOGLYPH_TRUE_POSITIVES,
+    "obfuscated": OBFUSCATED_TRUE_POSITIVES,
+    "international_format": INTERNATIONAL_TRUE_POSITIVES,
+    "fullwidth_digit": FULLWIDTH_DIGIT_TRUE_POSITIVES,
+}
+
+
+def build_hard_benchmark_dataset():
+    """
+    Builds the full, fixed hard-tier dataset (every fragment above, once
+    each -- unlike the easy tier, this isn't randomly sampled with a
+    seed/n, since the whole set is small and hand-curated; every fragment
+    is independently meaningful evidence, not a statistical sample from a
+    larger population). Returns the same {id, text, ground_truth} shape as
+    build_benchmark_dataset(), plus a "hard_category" field per sample so
+    results can be broken down by failure mode, not just by pattern type.
+    """
+    pattern_labels = ["email", "phone", "ssn_shaped", "fake_api_key"]
+    samples = []
+    i = 0
+    for category, per_pattern_fragments in HARD_TIER_CATEGORIES.items():
+        for label, fragments in per_pattern_fragments.items():
+            for fragment in fragments:
+                gt = {p: (p == label) for p in pattern_labels}
+                samples.append({
+                    "id": i, "text": fragment, "ground_truth": gt,
+                    "hard_category": category,
+                })
+                i += 1
+    return samples
+
+
+def score_hard_tier(samples):
+    """
+    Scores the hard-tier dataset the same way score() scores the easy
+    tier (same redact_text() call, same tp/fp/fn/tn bookkeeping, same
+    Wilson interval), but additionally breaks recall down by
+    hard_category, since which categories fail is the actually
+    informative output here, not just an aggregate number. No F1
+    bootstrap is computed for this tier: with a small, fixed (not
+    randomly sampled) dataset, resampling it doesn't estimate sampling
+    variability over a larger population the way it does for the
+    randomly-generated easy tier -- there is no larger population being
+    sampled from, so a bootstrap CI here would imply more than the design
+    supports.
+    """
+    pattern_labels = ["email", "phone", "ssn_shaped", "fake_api_key"]
+    by_category = {}
+
+    for sample in samples:
+        _, hits = redact_text(sample["text"])
+        detected = set(hits.keys())
+        category = sample["hard_category"]
+        by_category.setdefault(category, {"tp": 0, "fn": 0, "examples": []})
+        for p in pattern_labels:
+            truth = sample["ground_truth"][p]
+            if not truth:
+                continue  # this tier has no near-miss distractors; only score real positives
+            found = p in detected
+            if found:
+                by_category[category]["tp"] += 1
+            else:
+                by_category[category]["fn"] += 1
+            by_category[category]["examples"].append({
+                "text": sample["text"], "pattern": p, "detected": found,
+            })
+
+    category_results = {}
+    total_tp = total_fn = 0
+    for category, c in by_category.items():
+        tp, fn = c["tp"], c["fn"]
+        recall = tp / (tp + fn) if (tp + fn) else None
+        category_results[category] = {
+            "tp": tp, "fn": fn, "n": tp + fn,
+            "recall": round(recall, 3) if recall is not None else None,
+            "recall_ci_95": list(wilson_ci(tp, tp + fn)) if (tp + fn) else [None, None],
+            "examples": c["examples"],
+        }
+        total_tp += tp
+        total_fn += fn
+
+    overall_recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) else None
+    return {
+        "n_samples": len(samples),
+        "by_category": category_results,
+        "overall_recall": round(overall_recall, 3) if overall_recall is not None else None,
+        "overall_recall_ci_95": list(wilson_ci(total_tp, total_tp + total_fn)) if (total_tp + total_fn) else [None, None],
+        "scope_note": (
+            "Diagnostic hard tier: a small, hand-curated (not randomly "
+            "sampled) set of genuine PII fragments designed to probe OCR "
+            "noise, Unicode homoglyphs, deliberate obfuscation, "
+            "international formats, and fullwidth digits against the "
+            "existing four regex patterns. Recall gaps here are the "
+            "EXPECTED, honest result for a regex-only detector authored "
+            "against US-centric, clean-format examples -- see "
+            "docs/benchmark.md's \"Harder benchmark tier\" section. This "
+            "is not gated by a pass/fail threshold in "
+            "tests/test_pipeline.py; it is measured and reported, not "
+            "enforced."
+        ),
+    }
+
+
 def score(samples, ci_seed=42, n_bootstrap=1000):
     """
     Runs redact_text on each sample and computes per-pattern-type
@@ -384,15 +606,43 @@ def run(n=300, seed=42, out_path=None, n_bootstrap=1000):
     return report
 
 
+def run_hard_tier(out_path=None):
+    samples = build_hard_benchmark_dataset()
+    report = score_hard_tier(samples)
+    if out_path:
+        os.makedirs(os.path.dirname(out_path) or ".", exist_ok=True)
+        with open(out_path, "w") as f:
+            json.dump(report, f, indent=2)
+    return report
+
+
 def main():
     ap = argparse.ArgumentParser(description="DLP evaluation harness: precision/recall/F1 against synthetic ground truth, with 95% confidence intervals.")
-    ap.add_argument("--n", type=int, default=300, help="number of benchmark samples to generate")
-    ap.add_argument("--seed", type=int, default=42, help="RNG seed for reproducibility (also seeds the F1 bootstrap)")
-    ap.add_argument("--n_bootstrap", type=int, default=1000, help="number of bootstrap resamples for the F1 confidence interval")
-    ap.add_argument("--out", type=str, default="experiments/output/dlp_benchmark_report.json")
+    ap.add_argument("--n", type=int, default=300, help="number of benchmark samples to generate (easy tier only)")
+    ap.add_argument("--seed", type=int, default=42, help="RNG seed for reproducibility (also seeds the F1 bootstrap; easy tier only)")
+    ap.add_argument("--n_bootstrap", type=int, default=1000, help="number of bootstrap resamples for the F1 confidence interval (easy tier only)")
+    ap.add_argument("--tier", type=str, choices=["easy", "hard"], default="easy",
+                     help="'easy' (default): the randomly-generated, CI-gated benchmark this harness has always run. "
+                          "'hard': a small, fixed, diagnostic set probing OCR noise, Unicode homoglyphs, obfuscation, "
+                          "international formats, and fullwidth digits -- NOT gated by a threshold, see "
+                          "docs/benchmark.md's 'Harder benchmark tier' section.")
+    ap.add_argument("--out", type=str, default=None,
+                     help="defaults to experiments/output/dlp_benchmark_report.json (easy tier) or "
+                          "experiments/output/dlp_hard_tier_report.json (hard tier)")
     args = ap.parse_args()
 
-    report = run(n=args.n, seed=args.seed, out_path=args.out, n_bootstrap=args.n_bootstrap)
+    if args.tier == "hard":
+        out_path = args.out or "experiments/output/dlp_hard_tier_report.json"
+        report = run_hard_tier(out_path=out_path)
+        print(f"DLP hard tier: {report['n_samples']} hand-curated fragments (diagnostic, not threshold-gated)")
+        print(f"  overall recall: {report['overall_recall']} {report['overall_recall_ci_95']}")
+        for category, cm in report["by_category"].items():
+            print(f"  {category}: recall={cm['recall']} {cm['recall_ci_95']} (tp={cm['tp']} fn={cm['fn']} n={cm['n']})")
+        print(f"Report -> {out_path}")
+        return
+
+    out_path = args.out or "experiments/output/dlp_benchmark_report.json"
+    report = run(n=args.n, seed=args.seed, out_path=out_path, n_bootstrap=args.n_bootstrap)
     print(f"DLP benchmark: {report['n_samples']} samples, seed={args.seed}")
     m = report["micro_avg"]
     print(f"  micro-avg: precision={m['precision']} {m['precision_ci_95']}  "
@@ -403,7 +653,7 @@ def main():
               f"recall={pm['recall']} {pm['recall_ci_95']}  f1={pm['f1']} "
               f"wilson-plugin-CI={pm['f1_ci_95_wilson_plugin']} "
               f"(tp={pm['tp']} fp={pm['fp']} fn={pm['fn']} tn={pm['tn']})")
-    print(f"Report -> {args.out}")
+    print(f"Report -> {out_path}")
 
 
 if __name__ == "__main__":

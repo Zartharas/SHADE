@@ -24,6 +24,13 @@ jobs:
         with:
           name: dlp-benchmark-report
           path: experiments/output/dlp_benchmark_report.json
+      - name: Run DLP hard tier (diagnostic, not threshold-gated -- see docs/benchmark.md "Harder benchmark tier") and upload report
+        run: python3 shade/eval_harness.py --tier hard --out experiments/output/dlp_hard_tier_report.json
+      - name: Upload DLP hard tier report
+        uses: actions/upload-artifact@v4
+        with:
+          name: dlp-hard-tier-report
+          path: experiments/output/dlp_hard_tier_report.json
       - name: Run full pipeline end-to-end
         run: python3 shade/run_pipeline.py --n 500
       - name: Run full pipeline with the opt-in policy-review stage (see ADR 0002)

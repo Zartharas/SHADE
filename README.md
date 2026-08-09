@@ -88,7 +88,7 @@ shade/        the core package: five pipeline phases + orchestrator (run_pipelin
               + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
               + mcp_tool_call_monitor.py (opt-in pipeline stage, see docs/adr/0003)
               + dp_aggregate_reporting.py (opt-in pipeline stage, see docs/adr/0004)
-tests/        test_pipeline.py -- the self-check suite (19 checks)
+tests/        test_pipeline.py -- the self-check suite (20 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
@@ -175,7 +175,8 @@ The formal verification and evaluation harness can also be run standalone:
 
 ```bash
 python3 shade/verify_policy.py                                   # governance matrix: completeness + non-conflict
-python3 shade/eval_harness.py --n 300 --seed 42                  # DLP: precision/recall/F1 vs. synthetic ground truth
+python3 shade/eval_harness.py --n 300 --seed 42                  # DLP: precision/recall/F1 + 95% CIs vs. synthetic ground truth
+python3 shade/eval_harness.py --tier hard                        # DLP: diagnostic hard tier (OCR noise, homoglyphs, obfuscation, intl formats) -- see docs/benchmark.md
 ```
 
 ### Reproducing at scale

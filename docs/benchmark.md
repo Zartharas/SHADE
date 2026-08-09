@@ -238,11 +238,101 @@ python3 shade/dp_aggregate_reporting.py --n 500 --epsilons 1.0
 python3 shade/dp_aggregate_reporting.py --n 5000 --epsilons 1.0
 ```
 
+## Harder benchmark tier: measured results (2026-08-09)
+
+The "Future work" item that used to sit here -- OCR noise, Unicode
+homoglyphs, international formats, deliberate obfuscation -- has been
+built and measured (`shade/eval_harness.py --tier hard`,
+`build_hard_benchmark_dataset()` / `score_hard_tier()`). Unlike the
+n=300 default benchmark, this tier is a small, hand-curated, FIXED set
+(18 fragments, not randomly generated -- there's no larger population to
+sample from, so no bootstrap CI is computed for it, only a Wilson
+interval per category on the observed counts) and is diagnostic, not a
+CI pass/fail gate: a low recall here is the expected, honest result for
+a regex-only detector authored against clean, US-centric examples, not a
+regression.
+
+**Overall recall: 0.222 [Wilson 95% CI: 0.09, 0.452]** -- roughly one in
+five of these harder true-positive fragments is caught by the existing
+four patterns. By category:
+
+| Category | Recall | 95% CI | n |
+|---|---|---|---|
+| `fullwidth_digit` | 1.0 | [0.342, 1.0] | 2 |
+| `unicode_homoglyph` | 0.333 | [0.061, 0.792] | 3 |
+| `ocr_noise` | 0.2 | [0.036, 0.624] | 5 |
+| `obfuscated` | 0.0 | [0.0, 0.434] | 5 |
+| `international_format` | 0.0 | [0.0, 0.561] | 3 |
+
+**Every category's expected outcome was empirically checked against the
+actual patterns before being included** (measured, not assumed), and two
+results were genuinely non-obvious going in:
+
+- **Fullwidth Unicode digits are fully caught (2/2), not missed.**
+  Python's `\d` in default (Unicode) mode matches Unicode decimal-digit
+  characters, not just ASCII 0-9, so `５５５-１２３-４５６７` matches
+  the phone pattern exactly as written. This is a positive finding
+  reported alongside the negative ones specifically so the write-up
+  doesn't only showcase failures.
+- **A Unicode homoglyph in an email's local part is sometimes still
+  caught (1/3 in this category), depending on exactly where it falls.**
+  A homoglyph in the domain is never caught (the domain character-class
+  run breaks with no fallback). A homoglyph in the local part IS caught
+  if a punctuation character (a genuine word/non-word regex boundary)
+  follows it before the rest of the address -- the regex finds a valid
+  match starting from that punctuation boundary. A homoglyph immediately
+  followed by more letters, with no intervening punctuation, is not
+  caught. This nuance would have been easy to get wrong by assuming
+  "homoglyphs always defeat the pattern" or "never defeat it" -- neither
+  is true, which is exactly why this was tested rather than assumed.
+- **OCR noise does not affect the API key pattern the way it affects
+  phone/SSN.** `fake_api_key`'s character class (`[A-Za-z0-9_-]`) already
+  accepts both a digit and its common OCR look-alike letter (e.g. `0` and
+  `O`), so a single-character OCR-style substitution doesn't actually
+  change whether the pattern matches. Phone and SSN use `\d`-only
+  positions in fixed locations, so the same class of substitution does
+  break them. This is a property of how permissive a pattern's character
+  class is, not of "OCR noise" as a single uniform threat.
+- **Obfuscation (spelled-out or heavily spaced PII) and international
+  formats are caught 0% of the time**, exactly as the patterns' known
+  scope (US-centric, fixed-shape, non-obfuscated) predicts. This
+  confirms rather than surprises -- included for completeness of the
+  measured record, not because the result was in doubt.
+
+**What this does and doesn't mean:** these are real, measured recall
+gaps in `shade/dlp_redact.py`'s four regex patterns against a small,
+specific set of harder true positives -- not an estimate of real-world
+detection accuracy (see "What is NOT measured" above, which applies here
+too), and not a claim that 22% is "the" hard-tier accuracy of DLP
+regexes in general (the fixed set is illustrative, not a random sample
+of the space of possible obfuscation techniques). What it does establish
+concretely: the boundary this project has described qualitatively since
+early drafts of this document ("does not yet include OCR noise... would
+very plausibly surface recall gaps") is now a measured boundary with
+specific numbers behind it, not just a stated caveat.
+
+Reproduce with:
+
+```bash
+python3 shade/eval_harness.py --tier hard --out experiments/output/dlp_hard_tier_report.json
+```
+
+`tests/test_pipeline.py`'s `test_dlp_hard_tier_is_diagnostic_and_genuinely_harder`
+asserts the OPPOSITE of every other test in this suite: that overall
+recall stays below 1.0, specifically to catch the case where this tier
+accidentally stopped being hard (e.g. a fragment edited into something
+the patterns already handle) without anyone noticing.
+
 ## Future work (not implemented here)
 
-- Harder benchmark tiers: OCR noise, Unicode homoglyphs, international PII
-  formats, adversarial/obfuscated input.
-- If regex recall gaps are found on harder tiers, evaluating whether an
-  ML-based recognizer (e.g. Presidio/spaCy, as the production tools cited
-  in the README already use) closes them -- measured, not assumed, per the
-  existing caveat in `shade/dlp_redact.py`'s docstring.
+- If these regex recall gaps matter for a given deployment, evaluating
+  whether an ML-based recognizer (e.g. Presidio/spaCy, as the production
+  tools cited in the README already use) closes them -- measured, not
+  assumed, per the existing caveat in `shade/dlp_redact.py`'s docstring.
+  The hard tier above is exactly the kind of benchmark that evaluation
+  would need to be run against to claim an improvement, not just a
+  restatement of the n=300 easy-tier F1.
+- Expanding the hard tier's international-format coverage beyond the
+  three formats currently included (UK/India phone, UK National
+  Insurance number) if a specific jurisdiction becomes relevant to a
+  future extension of this work.
