@@ -130,25 +130,37 @@ produced -- a tighter integration than the module's own standalone CLI,
 which generates a fresh, separate synthetic run to privatize when invoked
 on its own (see `docs/adr/0004-integrating-dp-aggregate-reporting.md` for
 why that distinction mattered enough to change). A new `--dp_epsilon`
-flag (default `1.0`) controls the pipeline stage's single report; the
-multi-epsilon sweep remains a module-CLI-only capability. Four tests in
-`tests/test_pipeline.py`: valid non-negative noisy counts, a hand-checked
-MAE calculation, MAE trending downward as epsilon increases across a
-fixed sweep, and confirmation that the pipeline stage privatizes the
-exact run it claims to (its "true" counts match that run's real action
-distribution exactly).
+flag (default `1.0`) controls the pipeline stage's single report -- as of
+`docs/adr/0005-dp-privacy-budget-composition.md`, this is the TOTAL
+privacy budget for that report's two releases combined, not a per-release
+epsilon (see that ADR for the accounting bug this closed: the two
+releases used to each silently spend the full nominal epsilon, costing
+2x what the report claimed). The multi-epsilon sweep remains a
+module-CLI-only capability. Seven tests in `tests/test_pipeline.py`:
+valid non-negative noisy counts, a hand-checked MAE calculation, MAE
+trending downward as epsilon increases across a fixed sweep, confirmation
+that the pipeline stage privatizes the exact run it claims to (its "true"
+counts match that run's real action distribution exactly), correct
+epsilon/2 splitting across a report's two releases, and two
+`PrivacyBudgetTracker` tests (accumulates and blocks overspend before any
+noise is computed; rejects invalid construction/spend arguments).
 
-**What this still does NOT demonstrate, even integrated:** privacy budget
-composition across multiple releases (each run, pipeline-integrated or
-standalone, spends a fresh epsilon as if it were the only query ever made
--- a real deployment publishing several differently-sliced aggregates
-would need cumulative budget accounting this prototype doesn't
-implement), any DP-SGD training mechanism, or federated learning (the
+**What this still does NOT demonstrate, even integrated:** a *persistent,
+cross-process-invocation* privacy budget ledger. ADR 0005 closed the two
+composition gaps that existed at the time this section was first written
+-- intra-report composition (the two releases inside one
+`privatize_report()` call now correctly split the budget) and in-process
+cross-release composition (`PrivacyBudgetTracker` accumulates and caps
+spend across several calls within one Python process) -- but a real
+deployment publishing reports from separate, independently-scheduled
+`python3 shade/run_pipeline.py` invocations over days or weeks would need
+that spend tracked in a durable store (e.g. a state file read/written on
+each run) surviving across those invocations; that remains unbuilt and is
+flagged as future work in ADR 0005, not silently assumed solved. Also
+still absent: any DP-SGD training mechanism or federated learning (the
 scoping conversation's other listed option, not attempted -- picking both
 would have re-violated the "one, properly scoped" principle a second
-time). Integration changed where the module lives, how tested it is, and
-how tightly it's chained to a real run's own data -- it does not add
-budget composition or change what the mechanism itself protects.
+time).
 
 ## Common thread
 

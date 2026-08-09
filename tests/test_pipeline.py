@@ -2,7 +2,7 @@
 """
 tests/test_pipeline.py
 
-Internal self-check suite for Project SHADE (16 checks as of ADR 0004).
+Internal self-check suite for Project SHADE (25 checks as of ADR 0005).
 Started as three focused checks for the two places in the original
 pipeline with actual branching/security-relevant logic -- the governance
 decision matrix (paper Section 4.4) and the DLP redaction patterns
@@ -406,6 +406,83 @@ def test_dp_pipeline_stage_privatizes_this_runs_own_events():
     expected_true = dict(Counter(r["governance_action"] for r in rows))
     report = dp_reporting.privatize_report(rows, epsilon=1.0, seed=123)
     assert report["action_distribution"]["true"] == expected_true
+
+
+def test_dp_epsilon_is_split_across_the_two_releases_per_report():
+    # ADR 0005's core accounting fix: privatize_report()'s `epsilon` is the
+    # TOTAL budget for the report's two releases (action_distribution,
+    # department_distribution) combined, per basic composition -- so each
+    # release must actually be privatized at epsilon/2, not the full
+    # nominal epsilon (the pre-ADR-0005 bug: both releases silently spent
+    # the full epsilon each, understating true cost 2x).
+    from shade.generate_synthetic_data import generate as generate_events
+    from shade.governance_score import score_events
+    rows = generate_events(200, "config/known_endpoints.yaml", seed=7)
+    score_events(rows)
+    report = dp_reporting.privatize_report(rows, epsilon=2.0, seed=7)
+    assert report["total_epsilon"] == 2.0
+    assert report["per_query_epsilon"] == 1.0, (
+        f"expected per_query_epsilon=1.0 (=total/2), got {report['per_query_epsilon']}"
+    )
+    assert "epsilon" not in report, (
+        "old ambiguous 'epsilon' key should no longer be present -- "
+        "callers must read total_epsilon/per_query_epsilon explicitly"
+    )
+
+
+def test_dp_budget_tracker_accumulates_and_blocks_overspend():
+    # PrivacyBudgetTracker must: (1) accumulate spend correctly across
+    # calls, (2) allow a spend landing exactly at the budget (float
+    # tolerance), (3) reject -- BEFORE computing any noise -- a release
+    # that would push cumulative spend past the total budget, per ADR
+    # 0005's "fail closed" design.
+    from shade.generate_synthetic_data import generate as generate_events
+    from shade.governance_score import score_events
+    rows = generate_events(150, "config/known_endpoints.yaml", seed=99)
+    score_events(rows)
+
+    tracker = dp_reporting.PrivacyBudgetTracker(total_budget=1.0)
+    r1 = dp_reporting.privatize_report(rows, epsilon=0.5, seed=1, budget_tracker=tracker, label="r1")
+    assert tracker.spent == 0.5
+    assert r1["budget_tracker_state"]["spent"] == 0.5
+    assert r1["budget_tracker_state"]["remaining"] == 0.5
+
+    # Exactly-at-budget spend must be allowed, not rejected by float rounding.
+    r2 = dp_reporting.privatize_report(rows, epsilon=0.5, seed=2, budget_tracker=tracker, label="r2")
+    assert abs(tracker.spent - 1.0) < 1e-9
+    assert abs(tracker.remaining()) < 1e-9
+
+    # A third release, even a small one, must now be rejected.
+    try:
+        dp_reporting.privatize_report(rows, epsilon=0.1, seed=3, budget_tracker=tracker, label="r3")
+        assert False, "expected PrivacyBudgetExceededError, no exception was raised"
+    except dp_reporting.PrivacyBudgetExceededError:
+        pass
+
+    # Rejection must happen BEFORE any additional history/spend is recorded.
+    assert len(tracker.history) == 2
+    assert abs(tracker.spent - 1.0) < 1e-9
+
+
+def test_dp_budget_tracker_rejects_invalid_construction_and_spend():
+    # Guard against silently-nonsensical trackers/spends (non-positive
+    # budgets or epsilons), consistent with this project's other input
+    # validation (e.g. shade/verify_policy.py rejecting malformed matrices).
+    try:
+        dp_reporting.PrivacyBudgetTracker(total_budget=0)
+        assert False, "expected ValueError for non-positive total_budget"
+    except ValueError:
+        pass
+
+    tracker = dp_reporting.PrivacyBudgetTracker(total_budget=1.0)
+    try:
+        tracker.spend(epsilon=-0.1, label="bad")
+        assert False, "expected ValueError for non-positive epsilon"
+    except ValueError:
+        pass
+    # A failed spend() call must not have altered tracker state.
+    assert tracker.spent == 0.0
+    assert tracker.history == []
 
 
 def test_dlp_leaves_clean_text_untouched():

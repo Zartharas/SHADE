@@ -88,7 +88,7 @@ shade/        the core package: five pipeline phases + orchestrator (run_pipelin
               + policy_proposer.py (opt-in pipeline stage, see docs/adr/0002)
               + mcp_tool_call_monitor.py (opt-in pipeline stage, see docs/adr/0003)
               + dp_aggregate_reporting.py (opt-in pipeline stage, see docs/adr/0004)
-tests/        test_pipeline.py -- the self-check suite (22 checks)
+tests/        test_pipeline.py -- the self-check suite (25 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, reproducibility_manifest.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored

@@ -188,19 +188,28 @@ verification in ADRs 0002-0004):
   calls slip through as anything but `BLOCK`).
 - `--privatize_governance_report`: completes in ~2.4s. One finding worth
   noting explicitly: **absolute MAE does not shrink with n, but relative
-  error does.** At epsilon=1.0, seed=42, the action-distribution MAE was
-  1.2 at both n=500 and n=5,000 -- identical, because the Laplace
-  mechanism's noise scale (`sensitivity/epsilon`) depends only on
-  epsilon, not on how large the counts being noised are. But relative to
-  the true counts, that same fixed absolute error is far less
-  significant at scale: MAE/mean-count was 0.012 (1.2%) at n=500 versus
-  0.0012 (0.12%) at n=5,000 -- a 10x improvement in relative utility for
-  a 10x increase in dataset size, exactly as differential privacy theory
-  predicts (fixed absolute noise, shrinking relative impact as the
-  signal being protected grows). This is a real, measured property of
-  the implementation, not an assumption -- see
-  `docs/adr/0004-integrating-dp-aggregate-reporting.md` for the
-  integration this measures.
+  error does.** At TOTAL epsilon=1.0, seed=42, the action-distribution
+  MAE was 2.2 at both n=500 and n=5,000 -- identical, because the Laplace
+  mechanism's noise scale (`sensitivity/per_query_epsilon`) depends only
+  on epsilon, not on how large the counts being noised are. (This value
+  was previously reported as 1.2; it changed after
+  `docs/adr/0005-dp-privacy-budget-composition.md` corrected an
+  accounting bug where a report's two releases -- action distribution
+  and department distribution -- each silently spent the full nominal
+  epsilon instead of splitting it, understating true privacy cost 2x.
+  `epsilon=1.0` is now the TOTAL budget for both releases combined, so
+  each one actually uses `per_query_epsilon=0.5`, roughly doubling the
+  measured MAE -- the qualitative finding below is unchanged, only the
+  absolute figures are.) Relative to the true counts, that same fixed
+  absolute error is far less significant at scale: MAE/mean-count was
+  0.022 (2.2%) at n=500 versus 0.0022 (0.22%) at n=5,000 -- still a 10x
+  improvement in relative utility for a 10x increase in dataset size,
+  exactly as differential privacy theory predicts (fixed absolute noise,
+  shrinking relative impact as the signal being protected grows). This
+  is a real, measured property of the implementation, not an assumption
+  -- see `docs/adr/0004-integrating-dp-aggregate-reporting.md` for the
+  integration this measures and `docs/adr/0005-dp-privacy-budget-composition.md`
+  for the composition fix and corrected numbers.
 - All three flags run together (n=5,000) completed in ~4.1s with no
   errors, produced all 12 expected output files, and the full
   `tests/test_pipeline.py` suite (16 checks) still passed afterward.
