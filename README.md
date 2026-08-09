@@ -21,6 +21,22 @@ and makes no network calls, no cloud dependencies, and uses no real
 organizational, employee, or customer data at any stage.
 
 <p align="center">
+  <img src="docs/pipeline_animation.svg" alt="Animated diagram of the SHADE pipeline: Generate, Discover, Classify, Govern, Validate, each stage highlighting in sequence as a run passes through it" width="820">
+</p>
+
+<p align="center"><sub>Self-contained animated SVG (no JS, loops automatically) -- if it renders as static in your viewer, the Mermaid diagram below is the same flow as a text-based fallback.</sub></p>
+
+```mermaid
+flowchart LR
+    A[generate_synthetic_data.py<br/><sub>Faker, 100% synthetic</sub>] --> B[discovery_scan.py<br/><sub>Discover: sanctioned split</sub>]
+    B --> C[dlp_redact.py<br/><sub>Classify: DLP + risk tier</sub>]
+    C --> D[governance_score.py<br/><sub>Govern: verified decision matrix</sub>]
+    D --> E[build_dashboard.py<br/><sub>Validate: harness + report</sub>]
+    F[verify_policy.py<br/><sub>formal verification gate</sub>] -.guards.-> D
+    G[eval_harness.py<br/><sub>DLP precision/recall/F1</sub>] -.checks.-> C
+```
+
+<p align="center">
   <img src="docs/example_dashboard.png" alt="SHADE monitoring dashboard: discovery tool-class split, top AI tools by event volume, DLP sensitive-pattern hits by type, and governance decision-matrix outcomes, all on synthetic data" width="820">
 </p>
 
@@ -51,8 +67,9 @@ storage, maintenance, and development time still carry real operational cost.
 
 ```
 config/       tool registry (known_endpoints.yaml)
-docs/         theory.md, benchmark.md, adr/ (design decisions), example dashboard image
-experiments/  eval harness configs; experiments/output/ is generated+gitignored
+docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
+experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
+extensions/   optional, standalone prototypes (LLM policy proposer, MCP tool-call monitor, DP reporting) -- not wired into the core pipeline, see docs/extensions.md
 output/       generated pipeline artifacts (gitignored; regenerate anytime)
 paper/        manuscript/submission drafts (gitignored, local-only)
 *.py          the five pipeline phases + orchestrator + verification/eval harness, at repo root
@@ -64,6 +81,13 @@ paper/        manuscript/submission drafts (gitignored, local-only)
 - `docs/benchmark.md` states exactly what the evaluation harness measures
   and what it doesn't (internal consistency against synthetic ground
   truth, not real-world accuracy).
+- `docs/extensions.md` scopes the three optional prototypes in
+  `extensions/`: what each demonstrates and, as importantly, what it
+  doesn't.
+- `docs/shadow-ai-vs-shadow-it.md` is a short comparative note grounded in
+  DART and Silic et al. (2025), distinguishing Shadow AI from the older
+  Shadow IT category this project's discovery/inventory approach descends
+  from.
 - `docs/adr/` records the reasoning behind non-obvious design decisions,
   starting with why the governance matrix is verified by exhaustive
   enumeration rather than a SAT/SMT solver.
@@ -119,7 +143,7 @@ python3 eval_harness.py --n 300 --seed 42                  # DLP: precision/reca
 ## Production tooling (real deployments)
 
 For an actual organizational rollout, replace each SHADE module with the
-verified open-source tools cited in the chapter:
+verified open-source tools cited in the paper:
 
 - **Discovery:** [AIOStack](https://github.com/aurva-io/AIOstack) (Kubernetes/eBPF),
   [agent-discover-scanner](https://github.com/Defend-AI-Tech-Inc/agent-discover-scanner),
@@ -141,7 +165,7 @@ verified open-source tools cited in the chapter:
   format at a real data-export pipeline without a full legal/privacy review.
 - Deploying TLS-interception (mitmproxy-based) DLP in production requires
   jurisdiction-specific legal review and, in some jurisdictions, works-council
-  consultation before enabling content-level inspection. See chapter Section 5.4.
+  consultation before enabling content-level inspection. See paper Section 5.4.
 - This code is provided for educational/demonstration purposes only.
 
 ## License
@@ -150,6 +174,8 @@ MIT, see [LICENSE](LICENSE).
 
 ## Citing this work
 
-If you use this code or the accompanying paper, see [CITATION.cff](CITATION.cff)
-(fill in your name/ORCID/repo URL before publishing). GitHub renders a
-"Cite this repository" button automatically once this file is populated.
+If you use this code or the accompanying paper, see [CITATION.cff](CITATION.cff).
+Author identity is currently redacted pending the outcome of double-anonymous
+peer review (see the note at the bottom of that file); full attribution will
+be restored once a review decision is issued. GitHub renders a
+"Cite this repository" button automatically from this file.

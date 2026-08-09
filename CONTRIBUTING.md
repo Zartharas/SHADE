@@ -66,6 +66,28 @@ pattern. Keep `docs/benchmark.md` in sync with any change to what is or
 isn't measured -- the point of that document is to prevent the harness
 from silently implying more than it proves as it grows.
 
+## Working in extensions/
+
+`extensions/` holds optional, standalone prototypes -- not part of the
+core pipeline, not covered by `test_pipeline.py`, and each explicitly
+scoped in `docs/extensions.md` (what it demonstrates and what it doesn't).
+If you touch one:
+
+- Keep it standalone. Don't add imports from `extensions/` into
+  `run_pipeline.py`, `test_pipeline.py`, or any core-pipeline module --
+  that would silently change what the documented, tested pipeline does.
+- Reuse core logic where it genuinely fits (as the existing three do:
+  `dlp_redact.py`'s patterns, the exhaustive-enumeration verification
+  method from ADR 0001, `generate_synthetic_data.py`'s generator) instead
+  of reimplementing it.
+- Update `docs/extensions.md`'s scope/status section for whatever you
+  changed -- the point of that document is to prevent a scaffold from
+  silently implying more than it's actually been shown to do.
+- Run it standalone (`python3 extensions/<file>.py`) before committing;
+  see "Working in extensions/" note in `.github/workflows/test.yml` for
+  what CI checks (a smoke test that it runs without error, not a
+  correctness assertion -- these are prototypes, not production code).
+
 ## Style
 
 Standard library first; the project is intentionally "zero-budget" in

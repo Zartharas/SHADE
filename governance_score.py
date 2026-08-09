@@ -29,7 +29,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Optional
 
-# Mirrors the decision matrix in chapter Section 4.4.
+# Mirrors the decision matrix in paper Section 4.4.
 DECISION_MATRIX = {
     ("high", "critical"): "BLOCK",
     ("high", "sensitive"): "BLOCK_WITH_OVERRIDE",

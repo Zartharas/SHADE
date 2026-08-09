@@ -14,6 +14,27 @@ independently), and are **not wired into `run_pipeline.py` or
 behavior, and none of their claims should be read as claims about the core
 SHADE pipeline itself.
 
+```mermaid
+flowchart TB
+    subgraph core["Core pipeline (tested, wired into run_pipeline.py)"]
+        GS[governance_score.py<br/>DECISION_MATRIX] --> VP[verify_policy.py<br/>exhaustive verification]
+        DR[dlp_redact.py<br/>PATTERNS]
+        GEN[generate_synthetic_data.py]
+    end
+    subgraph ext["extensions/ (standalone, CI-smoke-tested only)"]
+        LLM[llm_policy_proposer.py<br/>propose -> verify -> human review]
+        MCP[mcp_tool_call_monitor.py<br/>agent tool-call telemetry]
+        DP[dp_aggregate_reporting.py<br/>Laplace mechanism on aggregates]
+        VC[_verification_core.py<br/>shared verify_arbitrary_matrix]
+    end
+    VP -.same method as.-> VC
+    LLM --> VC
+    MCP --> VC
+    MCP -.reuses.-> DR
+    DP -.privatizes output of.-> GS
+    GEN -.reused by.-> DP
+```
+
 ## 1. LLM-based dynamic policy generation (`extensions/llm_policy_proposer.py`)
 
 No live LLM API call is made anywhere in this repository -- SHADE is

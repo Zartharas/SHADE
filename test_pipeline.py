@@ -16,7 +16,7 @@ import eval_harness
 
 
 def test_decision_matrix_covers_every_cell():
-    # Every (tool_risk, data_sensitivity) combination in chapter Section 4.4's
+    # Every (tool_risk, data_sensitivity) combination in paper Section 4.4's
     # table must resolve to a real action, not the ALLOW_WITH_MONITORING fallback.
     expected = {
         ("high", "critical"): "BLOCK",

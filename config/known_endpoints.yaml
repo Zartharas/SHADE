@@ -3,7 +3,7 @@
 # Reference registry mapping AI tool identifiers to governance metadata.
 # This is a SMALL, ILLUSTRATIVE registry for the prototype only.
 # In production, this registry should be generated/maintained from
-# real discovery telemetry (Section 3 of the chapter): Zeek/Suricata
+# real discovery telemetry (Section 3 of the paper): Zeek/Suricata
 # SNI logs, AIOStack eBPF traces, agent-discover-scanner inventories,
 # and cloud control-plane logs -- not hand-maintained.
 
