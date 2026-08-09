@@ -22,4 +22,10 @@ COPY . .
 # failed build/run surfaces regressions immediately; override the command
 # to run the full pipeline instead, e.g.:
 #   docker run --rm shade python3 shade/run_pipeline.py --n 2000
+# Or run the slower, opt-in extended benchmark (DLP at higher volume and
+# across more seeds, the three opt-in pipeline extensions under load at
+# n=5000 -- see docs/benchmark.md's "Scale check" section and
+# scripts/run_extended_benchmark.py's docstring for why this is separate
+# from the fast default check above):
+#   docker run --rm -v "$(pwd)/experiments/output:/app/experiments/output" shade python3 scripts/run_extended_benchmark.py
 CMD ["python3", "tests/test_pipeline.py"]

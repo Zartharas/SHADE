@@ -78,7 +78,8 @@ tests/        test_pipeline.py -- the self-check suite (16 checks)
 config/       tool registry (known_endpoints.yaml)
 docs/         theory.md, benchmark.md, extensions.md, shadow-ai-vs-shadow-it.md, adr/, example dashboard image
 experiments/  eval harness configs + benchmark dataset generator scaffold; experiments/output/ is generated+gitignored
-extensions/   optional, standalone prototypes (MCP tool-call monitor, DP reporting) -- not wired into shade/, see docs/extensions.md
+extensions/   empty as of ADR 0004 (all three original prototypes graduated into shade/); starting point for future standalone additions, see docs/extensions.md
+scripts/      run_extended_benchmark.py -- opt-in, slower scale/multi-seed check, see "Reproducing at scale" below
 output/       generated pipeline artifacts (gitignored; regenerate anytime)
 paper/        manuscript/submission drafts (gitignored, local-only)
 ```
@@ -160,6 +161,32 @@ The formal verification and evaluation harness can also be run standalone:
 python3 shade/verify_policy.py                                   # governance matrix: completeness + non-conflict
 python3 shade/eval_harness.py --n 300 --seed 42                  # DLP: precision/recall/F1 vs. synthetic ground truth
 ```
+
+### Reproducing at scale
+
+`tests/test_pipeline.py` above is fast (n=300 DLP benchmark) by design, so
+it can run on every push. To check whether that result holds at higher
+volume and across more seeds, and to stress-test the three opt-in
+pipeline extensions (ADR 0002-0004) under load, run:
+
+```bash
+python3 scripts/run_extended_benchmark.py
+```
+
+or, for an environment-independent run via Docker:
+
+```bash
+docker build -t shade .
+docker run --rm -v "$(pwd)/experiments/output:/app/experiments/output" shade python3 scripts/run_extended_benchmark.py
+```
+
+This is also wired into CI as a manually-triggered job (`extended-benchmark`
+in `.github/workflows/test.yml`) -- anyone with a fork can run it from the
+Actions tab ("SHADE self-check" -> "Run workflow") and download the
+resulting JSON report as a build artifact, no local setup required. See
+`docs/benchmark.md`'s "Scale check" section for the numbers this last
+produced and why this check is kept separate from the fast, always-on
+`tests/test_pipeline.py` gate.
 
 ## Production tooling (real deployments)
 

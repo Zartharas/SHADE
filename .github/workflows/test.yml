@@ -3,6 +3,7 @@ name: SHADE self-check
 on:
   push:
   pull_request:
+  workflow_dispatch:  # lets anyone manually trigger the extended-benchmark job below from the Actions tab
 
 jobs:
   test:
@@ -42,3 +43,27 @@ jobs:
         run: docker build -t shade .
       - name: Run self-check inside container
         run: docker run --rm shade python3 tests/test_pipeline.py
+
+  extended-benchmark:
+    # Opt-in, manual trigger only (Actions tab -> Run workflow) -- this is
+    # intentionally NOT run on every push/PR, since it's slower than the
+    # `test` job above and answers a different question (does correctness
+    # hold at higher volume and across more seeds, not just the fast n=300
+    # CI uses). See scripts/run_extended_benchmark.py's docstring and
+    # docs/benchmark.md's "Scale check" section for why this is separate.
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies (pinned)
+        run: pip install -r requirements.txt
+      - name: Run extended benchmark (DLP at scale + multi-seed, extensions under load at n=5000)
+        run: python3 scripts/run_extended_benchmark.py --out experiments/output/extended_benchmark_report.json
+      - name: Upload extended benchmark report
+        uses: actions/upload-artifact@v4
+        with:
+          name: extended-benchmark-report
+          path: experiments/output/extended_benchmark_report.json

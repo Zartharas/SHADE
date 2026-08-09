@@ -153,7 +153,33 @@ verification in ADRs 0002-0004):
   errors, produced all 12 expected output files, and the full
   `tests/test_pipeline.py` suite (16 checks) still passed afterward.
 
-Reproduce with:
+Reproduce with a single command (see `scripts/run_extended_benchmark.py`,
+which runs exactly the checks above plus a re-run of the fast
+`tests/test_pipeline.py` suite afterward, and writes a structured JSON
+report):
+
+```bash
+python3 scripts/run_extended_benchmark.py
+```
+
+Or inside Docker, for an environment-independent run:
+
+```bash
+docker build -t shade .
+docker run --rm -v "$(pwd)/experiments/output:/app/experiments/output" shade python3 scripts/run_extended_benchmark.py
+```
+
+This is also available as a manually-triggered GitHub Actions job
+(`extended-benchmark` in `.github/workflows/test.yml` -- Actions tab ->
+"SHADE self-check" -> "Run workflow"), so anyone with a fork or PR access
+can reproduce these numbers without a local Python environment at all;
+the report is uploaded as a downloadable CI artifact. It is deliberately
+NOT run on every push/PR (unlike the fast `test` job) since it is slower
+and checks a different property (scale, not correctness) -- see the
+script's own docstring for the full reasoning.
+
+The individual commands, if you want to run just one piece rather than
+the whole script:
 
 ```bash
 python3 shade/eval_harness.py --n 2000 --seed 42
